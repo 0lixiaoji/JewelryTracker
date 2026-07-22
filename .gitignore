@@ -6,3 +6,4 @@ backend/uploads/*
 !backend/uploads/.gitkeep
 dist/
 .vite/
+venv/

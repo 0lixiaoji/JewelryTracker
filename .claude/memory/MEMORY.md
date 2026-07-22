@@ -1,2 +1,3 @@
 - [设计决策](design-decisions.md) — 首饰无名称、归一化逻辑、每日佩戴不覆盖、单人无认证
 - [工作准则](working-conventions.md) — 排查、操作、凭证、Git、工具使用及 Memory 管理准则
+- [数据库初始化](db-init.md) — 连接数据库并执行 migration.sql 建表的完整工作流
