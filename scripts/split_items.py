@@ -3,9 +3,7 @@
 
 用法: python scripts/split_items.py 手镯|项链|戒指
 
-手镯: 4列×9行, 540×630/格, 非对称margin, 输出到 items/bracelets/
-项链: 9列×5行, 240×283/格, 输出到 items/necklaces/
-戒指: 左右双区布局, 左侧1列×9行 + 右侧5列×10行, 输出到 items/rings/
+布局参数均配置在 CONFIGS 字典中，运行时自动打印。
 """
 
 from PIL import Image
@@ -57,8 +55,7 @@ CONFIGS = {
         },
     },
     "戒指": {
-        # 左右双区布局：左侧1列×9行 + 右侧5列×10行
-        # 两区在同一张图中，各自独立编号后合并
+        # 左右双区布局，两区在同一张图中，各自独立编号后合并
         "dual_zone": True,
         "source": "戒指.jpg",
         "out_dir": "rings",
@@ -66,7 +63,6 @@ CONFIGS = {
         "blank_saturation": 18,
         "blank_std": 20,
         "blank_logic": "and",  # AND: 两个都低才是空白；戒指金属 sat 可能很低但 std 高
-        # 左侧区域：1列×5行（非均匀分布，显式指定行边界）
         "left": {
             "cols": 1,
             "rows": 5,
@@ -81,7 +77,6 @@ CONFIGS = {
             # Ring 1: 25-270, 2: 320-560, 3: 625-765, 4: 805-1025, 5: 1050-1280
             "row_bounds": [25, 295, 592, 785, 1037, 1280],
         },
-        # 右侧区域：5列×10行（主区域）
         "right": {
             "cols": 5,
             "rows": 10,
@@ -93,6 +88,7 @@ CONFIGS = {
             "margin_b": 40,
             "x_off": 279,   # 右侧区域起始 x
             "y_off": 200,   # 右侧区域起始 y
+            "traversal": "col-major-rtl",  # 从右上开始，逐列向下，再向左
         },
     },
 }
@@ -129,7 +125,12 @@ def is_blank(arr, row, col, row_bounds, col_bounds, cfg):
 
 
 def process_zone(img, arr, w, h, zone_cfg, cfg, zone_name):
-    """处理单个网格区域，返回 [(cell, crop_coords), ...] 列表"""
+    """处理单个网格区域，返回 [(cell, crop_coords), ...] 列表
+
+    traversal 控制遍历顺序：
+    - "row-major"（默认）：逐行从上到下，每行从左到右
+    - "col-major-rtl"：逐列从右到左，每列从上到下
+    """
     cols = zone_cfg["cols"]
     rows = zone_cfg["rows"]
     cell_w = zone_cfg["cell_w"]
@@ -140,6 +141,7 @@ def process_zone(img, arr, w, h, zone_cfg, cfg, zone_name):
     mr = zone_cfg.get("margin_r", cfg.get("margin_r", 30))
     mt = zone_cfg.get("margin_t", cfg.get("margin_t", 40))
     mb = zone_cfg.get("margin_b", cfg.get("margin_b", 40))
+    traversal = zone_cfg.get("traversal", "row-major")
 
     # 构建行边界：支持显式指定 row_bounds 覆盖自动计算
     if "row_bounds" in zone_cfg:
@@ -148,54 +150,61 @@ def process_zone(img, arr, w, h, zone_cfg, cfg, zone_name):
         row_bounds = [y_off + r * cell_h for r in range(rows)] + [y_off + rows * cell_h]
     col_bounds = [x_off + c * cell_w for c in range(cols)] + [x_off + cols * cell_w]
 
+    # 根据 traversal 生成遍历顺序
+    if traversal == "col-major-rtl":
+        # 从右到左逐列，每列从上到下
+        order = [(row, col) for col in range(cols - 1, -1, -1) for row in range(rows)]
+    else:
+        # 默认：逐行从上到下，每行从左到右
+        order = [(row, col) for row in range(rows) for col in range(cols)]
+
     results = []
     skipped = 0
-    for row in range(rows):
-        for col in range(cols):
-            y1 = row_bounds[row]
-            y2 = row_bounds[row + 1]
-            x1 = col_bounds[col]
-            x2 = col_bounds[col + 1]
+    for row, col in order:
+        y1 = row_bounds[row]
+        y2 = row_bounds[row + 1]
+        x1 = col_bounds[col]
+        x2 = col_bounds[col + 1]
 
-            # 空白检测：同时检查全格子和上部 60%，取较低 std
-            # （避免底部边缘伪影和上一行戒指溢出的干扰）
-            patch_full = arr[y1:y2, x1:x2, :]
-            means_full = patch_full.mean(axis=(0, 1))
-            sat_full = float(means_full.max() - means_full.min())
-            std_full = float(patch_full.std(axis=(0, 1)).mean())
+        # 空白检测：同时检查全格子和上部 60%，取较低 std
+        # （避免底部边缘伪影和上一行戒指溢出的干扰）
+        patch_full = arr[y1:y2, x1:x2, :]
+        means_full = patch_full.mean(axis=(0, 1))
+        sat_full = float(means_full.max() - means_full.min())
+        std_full = float(patch_full.std(axis=(0, 1)).mean())
 
-            detect_h = (y2 - y1) * 3 // 5  # 上部 60%
-            patch_top = arr[y1:y1 + detect_h, x1:x2, :]
-            means_top = patch_top.mean(axis=(0, 1))
-            sat_top = float(means_top.max() - means_top.min())
-            std_top = float(patch_top.std(axis=(0, 1)).mean())
+        detect_h = (y2 - y1) * 3 // 5  # 上部 60%
+        patch_top = arr[y1:y1 + detect_h, x1:x2, :]
+        means_top = patch_top.mean(axis=(0, 1))
+        sat_top = float(means_top.max() - means_top.min())
+        std_top = float(patch_top.std(axis=(0, 1)).mean())
 
-            # 取两个窗口中较低的值（更保守地判为空白）
-            if std_full < std_top:
-                saturation, std = sat_full, std_full
-            else:
-                saturation, std = sat_top, std_top
+        # 取两个窗口中较低的值（更保守地判为空白）
+        if std_full < std_top:
+            saturation, std = sat_full, std_full
+        else:
+            saturation, std = sat_top, std_top
 
-            blank_sat = cfg["blank_saturation"]
-            blank_std = cfg["blank_std"]
-            if cfg.get("blank_logic") == "and":
-                blank = (saturation < blank_sat) and (std < blank_std)
-            else:
-                blank = (saturation < blank_sat) or (std < blank_std)
+        blank_sat = cfg["blank_saturation"]
+        blank_std = cfg["blank_std"]
+        if cfg.get("blank_logic") == "and":
+            blank = (saturation < blank_sat) and (std < blank_std)
+        else:
+            blank = (saturation < blank_sat) or (std < blank_std)
 
-            if blank:
-                skipped += 1
-                print(f"  跳过 {zone_name} R{row}C{col} (空白检测: sat={saturation:.0f}, std={std:.1f})")
-                continue
+        if blank:
+            skipped += 1
+            print(f"  跳过 {zone_name} R{row}C{col} (空白检测: sat={saturation:.0f}, std={std:.1f})")
+            continue
 
-            # 裁剪时应用 margin
-            cx1 = max(0, x1 - ml)
-            cy1 = max(0, y1 - mt)
-            cx2 = min(w, x2 + mr)
-            cy2 = min(h, y2 + mb)
+        # 裁剪时应用 margin
+        cx1 = max(0, x1 - ml)
+        cy1 = max(0, y1 - mt)
+        cx2 = min(w, x2 + mr)
+        cy2 = min(h, y2 + mb)
 
-            cell = img.crop((cx1, cy1, cx2, cy2))
-            results.append((cell, (cx1, cy1, cx2, cy2)))
+        cell = img.crop((cx1, cy1, cx2, cy2))
+        results.append((cell, (cx1, cy1, cx2, cy2)))
 
     return results, skipped
 
@@ -232,7 +241,7 @@ def main():
         if old_file.startswith(cfg["prefix"]) and old_file.endswith(".jpg"):
             os.remove(os.path.join(OUT_DIR, old_file))
 
-    # 双区布局（戒指）：左侧 + 右侧分别处理，统一编号
+    # 双区布局（戒指）：右侧 → 左侧，各自独立编号
     if cfg.get("dual_zone"):
         print(f"左侧区域: {cfg['left']['cols']}列 × {cfg['left']['rows']}行")
         if "row_bounds" in cfg["left"]:
@@ -241,33 +250,36 @@ def main():
             print(f"  格子: {cfg['left']['cell_w']}×{cfg['left']['cell_h']} 起始: x={cfg['left']['x_off']}, y={cfg['left']['y_off']}")
         print(f"右侧区域: {cfg['right']['cols']}列 × {cfg['right']['rows']}行")
         print(f"  格子: {cfg['right']['cell_w']}×{cfg['right']['cell_h']} 起始: x={cfg['right']['x_off']}, y={cfg['right']['y_off']}")
+        traversal = cfg['right'].get('traversal', 'row-major')
+        print(f"  遍历: {traversal}（从右上开始向下，再向左）")
 
-        idx = 0
+        total_saved = 0
         total_skipped = 0
 
-        # 先处理左侧区域（1列×9行）
-        print(f"\n--- 左侧区域 ---")
-        left_results, left_skipped = process_zone(img, arr, w, h, cfg["left"], cfg, "左侧")
-        total_skipped += left_skipped
-        for cell, (x1, y1, x2, y2) in left_results:
-            idx += 1
-            filename = f"{cfg['prefix']}_{idx:02d}.jpg"
-            out_path = os.path.join(OUT_DIR, filename)
-            cell.save(out_path, quality=95)
-            print(f"  已保存 {filename} [{x2-x1}×{y2-y1}] crop=({x1},{y1})-({x2},{y2})")
-
-        # 再处理右侧区域（5列×10行）
+        # 先处理右侧区域（编号从右上角开始）
         print(f"\n--- 右侧区域 ---")
         right_results, right_skipped = process_zone(img, arr, w, h, cfg["right"], cfg, "右侧")
         total_skipped += right_skipped
         for cell, (x1, y1, x2, y2) in right_results:
-            idx += 1
-            filename = f"{cfg['prefix']}_{idx:02d}.jpg"
+            total_saved += 1
+            filename = f"{cfg['prefix']}_R_{total_saved:02d}.jpg"
             out_path = os.path.join(OUT_DIR, filename)
             cell.save(out_path, quality=95)
             print(f"  已保存 {filename} [{x2-x1}×{y2-y1}] crop=({x1},{y1})-({x2},{y2})")
 
-        print(f"\n完成! 共切分 {idx} 张图片, 跳过 {total_skipped} 个空白格, 输出目录: {OUT_DIR}")
+        # 再处理左侧区域（独立编号）
+        print(f"\n--- 左侧区域 ---")
+        left_saved = 0
+        left_results, left_skipped = process_zone(img, arr, w, h, cfg["left"], cfg, "左侧")
+        total_skipped += left_skipped
+        for cell, (x1, y1, x2, y2) in left_results:
+            left_saved += 1
+            filename = f"{cfg['prefix']}_L_{left_saved:02d}.jpg"
+            out_path = os.path.join(OUT_DIR, filename)
+            cell.save(out_path, quality=95)
+            print(f"  已保存 {filename} [{x2-x1}×{y2-y1}] crop=({x1},{y1})-({x2},{y2})")
+
+        print(f"\n完成! 共切分 {total_saved + left_saved} 张图片 (右{total_saved}+左{left_saved}), 跳过 {total_skipped} 个空白格, 输出目录: {OUT_DIR}")
         return
 
     # 单区布局（手镯、项链）：原有逻辑
