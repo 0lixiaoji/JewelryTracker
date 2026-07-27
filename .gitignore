@@ -1,0 +1,9 @@
+node_modules/
+__pycache__/
+*.pyc
+.env
+backend/uploads/*
+!backend/uploads/.gitkeep
+dist/
+.vite/
+venv/
