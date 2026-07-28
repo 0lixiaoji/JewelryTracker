@@ -2,9 +2,9 @@
     "mcpServers": {
         "database": {
             "command": "node",
-            "args": ["./scripts/mcp-launcher.js"],
+            "args": ["./node_modules/@nilsir/mcp-server-mysql/dist/index.js"],
             "env": {
-                "DATABASE_URL_JEWELRY_TRACKER": "${DATABASE_URL_JEWELRY_TRACKER}",
+                "DATABASE_URL": "${env:DATABASE_URL_JEWELRY_TRACKER}",
                 "MYSQL_MODE": "admin",
                 "MYSQL_ALLOW_DDL": "true"
             }
