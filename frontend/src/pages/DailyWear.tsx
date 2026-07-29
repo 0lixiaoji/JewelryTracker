@@ -162,7 +162,6 @@ export default function DailyWear() {
                     selections[cat.id] === item.id ? 'selected' : ''
                   }`}
                   style={{ opacity: todayRecord ? 0.5 : 1 }}
-                  onClick={() => toggleItem(cat.id, item.id)}
                 >
                   <input
                     type="radio"
