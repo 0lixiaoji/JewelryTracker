@@ -1,0 +1,33 @@
+import { NavLink, Outlet } from 'react-router-dom';
+
+const NAV_ITEMS = [
+  { to: '/', label: '仪表盘', end: true },
+  { to: '/daily-wear', label: '每日佩戴' },
+  { to: '/items/new', label: '录入首饰' },
+  { to: '/history', label: '历史记录' },
+];
+
+export default function Layout() {
+  return (
+    <div className="app-shell">
+      <header className="app-header">
+        <h1>JewelryTracker</h1>
+        <nav>
+          {NAV_ITEMS.map((item) => (
+            <NavLink
+              key={item.to}
+              to={item.to}
+              end={item.end}
+              className={({ isActive }) => (isActive ? 'active' : '')}
+            >
+              {item.label}
+            </NavLink>
+          ))}
+        </nav>
+      </header>
+      <main className="app-main">
+        <Outlet />
+      </main>
+    </div>
+  );
+}

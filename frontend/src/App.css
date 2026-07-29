@@ -1,0 +1,471 @@
+/* ── Reset & Base ─────────────────────────────────────── */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  background: #f5f5f5;
+  color: #333;
+  line-height: 1.6;
+}
+
+/* ── Layout ───────────────────────────────────────────── */
+.app-shell {
+  max-width: 960px;
+  margin: 0 auto;
+  padding: 0 16px;
+}
+
+.app-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 0;
+  border-bottom: 1px solid #ddd;
+  margin-bottom: 24px;
+}
+
+.app-header h1 {
+  font-size: 1.4rem;
+}
+
+.app-header nav {
+  display: flex;
+  gap: 16px;
+}
+
+.app-header nav a {
+  text-decoration: none;
+  color: #666;
+  font-size: 0.95rem;
+  padding: 4px 8px;
+  border-radius: 4px;
+}
+
+.app-header nav a.active {
+  color: #1a73e8;
+  background: #e8f0fe;
+  font-weight: 600;
+}
+
+.app-main {
+  padding-bottom: 48px;
+}
+
+/* ── Status ───────────────────────────────────────────── */
+.status-msg {
+  text-align: center;
+  padding: 40px 0;
+  color: #999;
+}
+
+.status-msg.error {
+  color: #d32f2f;
+}
+
+/* ── Category Grid ────────────────────────────────────── */
+.category-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: 16px;
+  margin-top: 16px;
+}
+
+.category-card {
+  background: #fff;
+  border-radius: 8px;
+  padding: 20px;
+  text-align: center;
+  box-shadow: 0 1px 3px rgba(0,0,0,.1);
+}
+
+.category-card h3 a {
+  text-decoration: none;
+  color: #1a73e8;
+}
+
+.badge {
+  display: inline-block;
+  background: #e8f5e9;
+  color: #2e7d32;
+  font-size: 0.75rem;
+  padding: 2px 8px;
+  border-radius: 10px;
+  margin-top: 8px;
+}
+
+/* ── Item Grid ────────────────────────────────────────── */
+.item-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 12px;
+  margin-top: 16px;
+}
+
+.item-card {
+  background: #fff;
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 1px 3px rgba(0,0,0,.1);
+  position: relative;
+}
+
+.item-card img {
+  width: 100%;
+  aspect-ratio: 1;
+  object-fit: cover;
+}
+
+.item-card p {
+  padding: 8px;
+  font-size: 0.85rem;
+  text-align: center;
+}
+
+/* ── Forms ────────────────────────────────────────────── */
+.item-form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  max-width: 400px;
+  margin-top: 16px;
+}
+
+.item-form label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-weight: 600;
+}
+
+.item-form select,
+.item-form input[type="file"] {
+  padding: 8px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+}
+
+.preview img {
+  max-width: 100%;
+  max-height: 240px;
+  border-radius: 8px;
+}
+
+/* ── Buttons ──────────────────────────────────────────── */
+button {
+  cursor: pointer;
+  padding: 8px 20px;
+  border: none;
+  border-radius: 6px;
+  background: #1a73e8;
+  color: #fff;
+  font-size: 0.95rem;
+}
+
+button:hover { background: #1558b0; }
+button:disabled { background: #aaa; cursor: not-allowed; }
+
+/* ── Daily Wear Picker ────────────────────────────────── */
+.wear-category {
+  margin-bottom: 20px;
+}
+
+.wear-category h3 {
+  margin-bottom: 8px;
+}
+
+.item-picker {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.picker-item {
+  cursor: pointer;
+  border: 2px solid transparent;
+  border-radius: 8px;
+  overflow: hidden;
+  padding: 4px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.picker-item.selected {
+  border-color: #1a73e8;
+  background: #e8f0fe;
+}
+
+.picker-item input {
+  margin: 0 4px;
+}
+
+.picker-item img {
+  width: 60px;
+  height: 60px;
+  object-fit: cover;
+  border-radius: 4px;
+}
+
+.picker-item.none {
+  font-size: 0.85rem;
+  color: #999;
+}
+
+/* ── History ──────────────────────────────────────────── */
+.history-day {
+  background: #fff;
+  border-radius: 8px;
+  padding: 16px;
+  margin-bottom: 12px;
+  box-shadow: 0 1px 3px rgba(0,0,0,.1);
+}
+
+.history-day h3 {
+  margin-bottom: 8px;
+  font-size: 1rem;
+}
+
+.history-items {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.history-item img {
+  width: 60px;
+  height: 60px;
+  object-fit: cover;
+  border-radius: 4px;
+}
+
+/* ── Pagination ───────────────────────────────────────── */
+.pagination {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  margin-top: 20px;
+}
+
+.pagination span {
+  font-size: 0.9rem;
+  color: #666;
+}
+
+/* ── Toast ────────────────────────────────────────────── */
+.toast-container {
+  position: fixed;
+  top: 16px;
+  right: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  z-index: 1000;
+}
+
+.toast {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 16px;
+  border-radius: 8px;
+  color: #fff;
+  font-size: 0.9rem;
+  min-width: 240px;
+  box-shadow: 0 4px 12px rgba(0,0,0,.15);
+  animation: slideIn 0.3s ease;
+}
+
+.toast-success { background: #2e7d32; }
+.toast-error   { background: #d32f2f; }
+.toast-info    { background: #1a73e8; }
+
+.toast button {
+  background: transparent;
+  border: none;
+  color: inherit;
+  font-size: 1.2rem;
+  padding: 0;
+  line-height: 1;
+}
+
+@keyframes slideIn {
+  from { transform: translateX(100%); opacity: 0; }
+  to   { transform: translateX(0); opacity: 1; }
+}
+
+/* ── Spinner ──────────────────────────────────────────── */
+.spinner {
+  width: 32px; height: 32px;
+  border: 3px solid #ddd;
+  border-top-color: #1a73e8;
+  border-radius: 50%;
+  animation: spin 0.6s linear infinite;
+  margin: 0 auto 8px;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* ── Empty State ──────────────────────────────────────── */
+.empty-state {
+  text-align: center;
+  padding: 48px 16px;
+  color: #999;
+}
+.empty-icon { font-size: 2.5rem; display: block; margin-bottom: 8px; }
+.empty-state p { margin-bottom: 12px; }
+
+/* ── Image Fallback ───────────────────────────────────── */
+.img-fallback {
+  background: #e0e0e0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.5rem;
+  color: #999;
+}
+
+/* ── Modal ────────────────────────────────────────────── */
+.modal-overlay {
+  position: fixed; inset: 0;
+  background: rgba(0,0,0,.4);
+  display: flex; align-items: center; justify-content: center;
+  z-index: 1100;
+}
+.modal {
+  background: #fff;
+  border-radius: 12px;
+  padding: 24px;
+  max-width: 400px; width: 90%;
+  box-shadow: 0 8px 30px rgba(0,0,0,.2);
+}
+.modal h3 { margin-bottom: 8px; }
+.modal p { color: #666; margin-bottom: 20px; }
+.modal-actions { display: flex; gap: 12px; justify-content: flex-end; }
+
+/* ── Button Variants ──────────────────────────────────── */
+.btn-outline {
+  background: transparent; color: #1a73e8;
+  border: 1px solid #1a73e8;
+}
+.btn-outline:hover { background: #e8f0fe; }
+
+.btn-danger { background: #d32f2f; }
+.btn-danger:hover { background: #b71c1c; }
+
+.btn-sm { padding: 4px 12px; font-size: 0.8rem; }
+
+.btn-icon {
+  background: transparent; color: #999;
+  padding: 2px 6px; font-size: 1rem; line-height: 1;
+}
+.btn-icon:hover { background: #f0f0f0; color: #d32f2f; }
+
+/* ── Page Header ──────────────────────────────────────── */
+.page-header {
+  display: flex; align-items: center; gap: 12px;
+  margin-bottom: 16px;
+}
+.page-header h2 { flex: 1; }
+.page-header .btn-back {
+  background: transparent; color: #1a73e8;
+  font-size: 0.9rem; padding: 4px 0;
+}
+
+/* ── Item Card (with actions) ─────────────────────────── */
+.item-card .item-actions {
+  position: absolute; top: 4px; right: 4px;
+  display: flex; gap: 2px;
+  opacity: 0; transition: opacity 0.15s;
+}
+.item-card:hover .item-actions { opacity: 1; }
+.item-card .item-actions button {
+  background: rgba(255,255,255,.9); color: #333;
+  font-size: 0.7rem; padding: 2px 8px;
+  border-radius: 4px; cursor: pointer;
+}
+.item-card .item-actions button:hover { background: #fff; }
+.item-card .item-actions button.btn-danger {
+  background: rgba(211,47,47,.9); color: #fff;
+}
+.item-card .item-actions button.btn-danger:hover {
+  background: #d32f2f;
+}
+
+.item-card .item-meta {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 6px 8px;
+}
+.item-card .item-meta select {
+  font-size: 0.75rem; padding: 2px 4px;
+  border: 1px solid #ddd; border-radius: 3px;
+}
+
+/* ── Upload Dropzone ──────────────────────────────────── */
+.dropzone {
+  border: 2px dashed #ccc;
+  border-radius: 12px;
+  padding: 32px;
+  text-align: center;
+  cursor: pointer;
+  transition: border-color 0.2s, background 0.2s;
+}
+.dropzone:hover { border-color: #1a73e8; background: #f8faff; }
+.dropzone.has-file { border-style: solid; border-color: #2e7d32; }
+.dropzone-icon { font-size: 2rem; display: block; margin-bottom: 8px; }
+.dropzone p { color: #999; font-size: 0.9rem; }
+.dropzone input[type="file"] { display: none; }
+
+/* ── Stat Bar ─────────────────────────────────────────── */
+.stat-bar {
+  display: flex; gap: 24px;
+  padding: 16px 0; margin-bottom: 8px;
+}
+.stat-item {
+  display: flex; flex-direction: column; align-items: center;
+}
+.stat-value { font-size: 1.5rem; font-weight: 700; color: #1a73e8; }
+.stat-label { font-size: 0.8rem; color: #999; }
+
+/* ── Today Badge ──────────────────────────────────────── */
+.today-badge {
+  display: inline-block;
+  background: #fff3e0; color: #e65100;
+  font-size: 0.75rem;
+  padding: 2px 10px;
+  border-radius: 10px;
+  margin-left: 8px;
+}
+
+/* ── Submit Bar ───────────────────────────────────────── */
+.submit-bar {
+  position: sticky; bottom: 16px;
+  display: flex; align-items: center; justify-content: center;
+  gap: 12px;
+  padding: 16px;
+  background: #fff;
+  border-radius: 12px;
+  box-shadow: 0 -2px 12px rgba(0,0,0,.1);
+  margin-top: 24px;
+}
+.submit-bar .selected-count { color: #666; font-size: 0.9rem; }
+
+/* ── Wider Image Picker ───────────────────────────────── */
+.picker-item img {
+  width: 80px; height: 80px;
+}
+
+/* ── Responsive ───────────────────────────────────────── */
+@media (max-width: 640px) {
+  .app-header { flex-direction: column; gap: 8px; }
+  .app-header nav { flex-wrap: wrap; justify-content: center; }
+  .category-grid { grid-template-columns: repeat(3, 1fr); }
+  .item-grid { grid-template-columns: repeat(3, 1fr); }
+  .picker-item img { width: 56px; height: 56px; }
+}

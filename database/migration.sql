@@ -16,10 +16,14 @@ CREATE TABLE IF NOT EXISTS categories (
 
 INSERT INTO categories (name_zh, sort_order) VALUES
     ('发圈', 1),
-    ('耳钉', 2),
-    ('项链', 3),
-    ('手镯', 4),
-    ('戒指', 5);
+    ('发卡', 2),
+    ('眼影', 3),
+    ('耳环', 4),
+    ('口红', 5),
+    ('项链', 6),
+    ('手链', 7),
+    ('戒指', 8),
+    ('盒子', 9);
 
 -- 2. 首饰表（纯图片辨认，无名称）
 CREATE TABLE IF NOT EXISTS items (
