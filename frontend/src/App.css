@@ -118,7 +118,8 @@ body {
 .item-card img {
   width: 100%;
   aspect-ratio: 1;
-  object-fit: cover;
+  object-fit: contain;
+  background: #fafafa;
 }
 
 .item-card p {
@@ -208,8 +209,9 @@ button:disabled { background: #aaa; cursor: not-allowed; }
 .picker-item img {
   width: 60px;
   height: 60px;
-  object-fit: cover;
+  object-fit: contain;
   border-radius: 4px;
+  background: #fafafa;
 }
 
 .picker-item.none {
@@ -240,8 +242,9 @@ button:disabled { background: #aaa; cursor: not-allowed; }
 .history-item img {
   width: 60px;
   height: 60px;
-  object-fit: cover;
+  object-fit: contain;
   border-radius: 4px;
+  background: #fafafa;
 }
 
 /* ── Pagination ───────────────────────────────────────── */
