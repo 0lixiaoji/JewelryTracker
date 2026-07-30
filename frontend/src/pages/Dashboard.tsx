@@ -5,7 +5,7 @@ import ConfirmDialog from '../components/ConfirmDialog';
 import LoadingSpinner from '../components/LoadingSpinner';
 import { useCategories } from '../contexts/CategoryContext';
 import { useNotification } from '../contexts/NotificationContext';
-import { exportDatabase, importDatabase } from '../db/database';
+import { downloadBackup, exportDatabase, importDatabase, listBackups } from '../db/database';
 import { usePWAInstall } from '../hooks/usePWAInstall';
 
 const CATEGORY_ICONS: Record<string, string> = {
@@ -28,6 +28,8 @@ export default function Dashboard() {
   const [confirmCat, setConfirmCat] = useState<{ id: number; name: string } | null>(null);
   const [importing, setImporting] = useState(false);
   const [exportUrl, setExportUrl] = useState('');
+  const [showBackups, setShowBackups] = useState(false);
+  const [backupList, setBackupList] = useState<string[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { canInstall, install, isIOS, hasNativePrompt } = usePWAInstall();
 
@@ -45,6 +47,20 @@ export default function Dashboard() {
       notify(e instanceof Error ? e.message : '归一化失败', 'error');
     } finally {
       setNormalizing(null);
+    }
+  };
+
+  const handleShowBackups = () => {
+    setBackupList(listBackups());
+    setShowBackups(true);
+  };
+
+  const handleDownloadBackup = async (filename: string) => {
+    try {
+      await downloadBackup(filename);
+      setShowBackups(false);
+    } catch (e) {
+      notify(e instanceof Error ? e.message : '下载失败', 'error');
     }
   };
 
@@ -149,6 +165,9 @@ export default function Dashboard() {
           <button className="btn-outline btn-sm" onClick={handleExport}>
             📥 导出数据库
           </button>
+          <button className="btn-outline btn-sm" onClick={handleShowBackups}>
+            📂 查看备份
+          </button>
           <label className="btn-outline btn-sm" style={{ cursor: 'pointer' }}>
             {importing ? '导入中…' : '📤 导入数据库'}
             <input
@@ -192,6 +211,42 @@ export default function Dashboard() {
                 安装
               </button>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* 备份列表弹窗 */}
+      {showBackups && (
+        <div className="confirm-overlay" onClick={() => setShowBackups(false)}>
+          <div className="confirm-box" onClick={(e) => e.stopPropagation()} style={{ maxWidth: 400 }}>
+            <h3 style={{ marginTop: 0 }}>📂 自动备份</h3>
+            {backupList.length === 0 ? (
+              <p style={{ color: '#999' }}>暂无备份，明天打开 App 后自动创建</p>
+            ) : (
+              <div style={{ maxHeight: 300, overflow: 'auto' }}>
+                {backupList.map((name) => {
+                  const dateStr = name.replace('jewelry-backup-', '').replace('.db', '');
+                  return (
+                    <div key={name} style={{
+                      display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                      padding: '8px 0', borderBottom: '1px solid #f0f0f0',
+                    }}>
+                      <span>📄 {dateStr}</span>
+                      <button className="btn-outline btn-sm" onClick={() => handleDownloadBackup(name)}>
+                        下载
+                      </button>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+            <button
+              className="btn-outline btn-sm"
+              style={{ width: '100%', marginTop: 12 }}
+              onClick={() => setShowBackups(false)}
+            >
+              关闭
+            </button>
           </div>
         </div>
       )}

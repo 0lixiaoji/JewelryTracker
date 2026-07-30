@@ -358,3 +358,28 @@ export async function autoBackup(): Promise<void> {
     console.warn('自动备份失败:', err);
   }
 }
+
+/** 获取所有备份文件列表（按日期倒序） */
+export function listBackups(): string[] {
+  const list = JSON.parse(localStorage.getItem(BACKUP_LIST_KEY) ?? '[]') as string[];
+  return list.filter((n) => n.startsWith(BACKUP_PREFIX) && n.endsWith('.db')).sort().reverse();
+}
+
+/** 下载指定日期的备份文件（通过 export.html） */
+export async function downloadBackup(filename: string): Promise<void> {
+  const root = await navigator.storage.getDirectory();
+  const backupsDir = await root.getDirectoryHandle('backups');
+  const handle = await backupsDir.getFileHandle(filename);
+  const file = await handle.getFile();
+  const buffer = await file.arrayBuffer();
+  const bytes = new Uint8Array(buffer);
+
+  // 转 base64 存 localStorage，供 export.html 下载
+  let binary = '';
+  for (let i = 0; i < bytes.length; i++) {
+    binary += String.fromCharCode(bytes[i]);
+  }
+  localStorage.setItem('jewelry_export_data', btoa(binary));
+  localStorage.setItem('jewelry_export_filename', filename);
+  window.open(location.origin + import.meta.env.BASE_URL + 'export.html', '_blank');
+}
