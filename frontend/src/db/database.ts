@@ -256,9 +256,11 @@ export function setupAutoSave(): void {
 
 /** 导出数据库为文件下载 */
 export async function exportDatabase(): Promise<void> {
-  await saveSnapshot();
+  console.log('[export] v4 start');
   const database = getDBSync();
   const data = database.export();
+  console.log('[export] data size:', data.byteLength);
+
   const filename = `jewelry-backup-${new Date().toISOString().slice(0, 10)}.db`;
   const blob = new Blob([data], { type: 'application/octet-stream' });
   const url = URL.createObjectURL(blob);
@@ -269,22 +271,20 @@ export async function exportDatabase(): Promise<void> {
     throw new Error('微信内不支持，请点右上角「…」→「在浏览器中打开」');
   }
 
-  // 直接用 window.open 触发系统下载（PWA/浏览器通用，最可靠）
-  // 在 Android 上会弹出下载管理器，iOS 上会打开文件预览
-  const w = window.open(url, '_blank');
-  if (!w) {
-    // 弹窗被拦截，用 a.click 兜底
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = filename;
-    a.style.display = 'none';
-    document.body.appendChild(a);
-    a.click();
-    setTimeout(() => document.body.removeChild(a), 1000);
-  }
+  // 创建下载链接并点击
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  console.log('[export] clicking download link');
+  a.click();
+  console.log('[export] clicked');
 
-  // 延迟清理（等下载触发后）
-  setTimeout(() => URL.revokeObjectURL(url), 5000);
+  // 给浏览器时间触发下载
+  await new Promise((r) => setTimeout(r, 2000));
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+  console.log('[export] done');
 }
 
 /** 导入数据库文件，替换当前数据库 */
