@@ -10,6 +10,7 @@
   "background_color": "#fdf6f0",
   "theme_color": "#d4a574",
   "orientation": "portrait-primary",
+  "prefer_related_applications": false,
   "icons": [
     {
       "src": "/JewelryTracker/icon-192.png",

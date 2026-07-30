@@ -39,12 +39,22 @@
     <script type="module" src="/src/main.tsx"></script>
     <script>
       if ('serviceWorker' in navigator) {
-        navigator.serviceWorker.register('/JewelryTracker/sw.js')
+        navigator.serviceWorker.register('/JewelryTracker/sw.js?v=4')
           .then(function(reg) {
-            console.log('SW registered:', reg.scope);
+            // 检测更新并自动刷新
+            reg.addEventListener('updatefound', function() {
+              var worker = reg.installing;
+              if (!worker) return;
+              worker.addEventListener('statechange', function() {
+                if (worker.state === 'installed' && navigator.serviceWorker.controller) {
+                  // 新 SW 已就绪，刷新页面使其生效
+                  location.reload();
+                }
+              });
+            });
           })
           .catch(function(err) {
-            console.log('SW registration failed:', err);
+            console.log('SW failed:', err);
           });
       }
     </script>
