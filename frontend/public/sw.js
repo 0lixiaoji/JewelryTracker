@@ -1,13 +1,29 @@
-/** 简单的 Service Worker — 缓存静态资源 + 离线回退
- *
- * 注意: 构建时 vite-plugin-pwa 会注入 self.__WB_MANIFEST
- * 这里使用手动策略避免 workbox Node 18 兼容问题。
- */
+const CACHE_NAME = 'jewelry-v2';
 
-const CACHE_NAME = 'jewelry-tracker-v1';
+// 安装时预缓存核心资源（WASM + 图标）
+const PRE_CACHE = [
+  '/JewelryTracker/',
+  '/JewelryTracker/sql-wasm-browser.wasm',
+  '/JewelryTracker/icon-192.png',
+  '/JewelryTracker/icon-512.png',
+  '/JewelryTracker/manifest.json',
+];
 
-// 安装时预缓存关键资源
-self.addEventListener('install', () => {
+self.addEventListener('install', (event) => {
+  event.waitUntil(
+    caches.open(CACHE_NAME).then((cache) => {
+      // 逐个缓存，一个失败不影响其他
+      return Promise.allSettled(
+        PRE_CACHE.map((url) =>
+          fetch(url, { cache: 'reload' })
+            .then((res) => {
+              if (res.ok) cache.put(url, res);
+            })
+            .catch(() => {}),
+        ),
+      );
+    }),
+  );
   self.skipWaiting();
 });
 
@@ -21,40 +37,44 @@ self.addEventListener('activate', (event) => {
   self.clients.claim();
 });
 
-// 网络优先，失败时回退缓存
+// 缓存优先（WASM 等静态资源），网络回退
 self.addEventListener('fetch', (event) => {
   const { request } = event;
+  if (request.method !== 'GET' || !request.url.startsWith('http')) return;
 
-  // 只处理 GET
-  if (request.method !== 'GET') return;
+  // WASM 和静态资源：缓存优先
+  if (
+    request.url.includes('sql-wasm-browser.wasm') ||
+    request.url.includes('/assets/') ||
+    request.destination === 'image' ||
+    request.destination === 'style' ||
+    request.destination === 'script'
+  ) {
+    event.respondWith(
+      caches.match(request).then((cached) => {
+        const fetchPromise = fetch(request).then((response) => {
+          if (response.ok) {
+            const clone = response.clone();
+            caches.open(CACHE_NAME).then((cache) => cache.put(request, clone));
+          }
+          return response;
+        });
+        return cached || fetchPromise;
+      }),
+    );
+    return;
+  }
 
-  // 跳过 chrome-extension:// 等
-  if (!request.url.startsWith('http')) return;
-
+  // 其他请求：网络优先
   event.respondWith(
     fetch(request)
       .then((response) => {
-        // 缓存成功响应
         if (response.ok) {
           const clone = response.clone();
-          caches.open(CACHE_NAME).then((cache) => {
-            cache.put(request, clone);
-          });
+          caches.open(CACHE_NAME).then((cache) => cache.put(request, clone));
         }
         return response;
       })
-      .catch(async () => {
-        // 离线时尝试从缓存读取
-        const cached = await caches.match(request);
-        if (cached) return cached;
-
-        // 对导航请求返回 index.html (SPA)
-        if (request.mode === 'navigate') {
-          const fallback = await caches.match('/index.html');
-          if (fallback) return fallback;
-        }
-
-        return new Response('离线模式，资源不可用', { status: 503 });
-      }),
+      .catch(() => caches.match(request)),
   );
 });
