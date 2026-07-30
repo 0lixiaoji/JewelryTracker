@@ -198,13 +198,6 @@ export default function Dashboard() {
             <span style={{ fontSize: '1.2rem' }}>📱</span>
             <div style={{ flex: 1 }}>
               <strong>添加到桌面</strong>
-              <p style={{ margin: 0, fontSize: '0.8rem', color: '#666' }}>
-                {isIOS
-                  ? '点分享按钮 → 添加到主屏幕'
-                  : hasNativePrompt
-                    ? '像一个原生 App 一样使用'
-                    : '点 Chrome 右上菜单 → 添加到主屏幕'}
-              </p>
             </div>
             {!isIOS && hasNativePrompt && (
               <button className="btn-sm" onClick={() => install().catch(() => {})}>
