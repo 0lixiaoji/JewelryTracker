@@ -39,8 +39,10 @@ export function usePWAInstall() {
 
   const isIOS = /iPhone|iPad|iPod/.test(navigator.userAgent);
   const isAndroid = /Android/i.test(navigator.userAgent);
-  // 已安装不显示，iOS/Android 未安装就显示
-  const canInstall = !isInstalled && (isIOS || isAndroid);
+  // 微信等内置浏览器不支持 PWA 安装
+  const isInAppBrowser = /MicroMessenger|WeChat|QQ\//i.test(navigator.userAgent);
+  // 只在纯浏览器中显示（排除 App 独立窗口、微信、小程序等）
+  const canInstall = !isInstalled && (isIOS || isAndroid) && !isInAppBrowser;
 
   return { canInstall, install, isInstalled, isIOS, isAndroid, hasNativePrompt: deferredPrompt !== null };
 }
