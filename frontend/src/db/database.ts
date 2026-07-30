@@ -261,29 +261,27 @@ export async function exportDatabase(): Promise<void> {
   const data = database.export();
   const filename = `jewelry-backup-${new Date().toISOString().slice(0, 10)}.db`;
   const file = new File([data], filename, { type: 'application/octet-stream' });
-  const blob = new Blob([data], { type: 'application/octet-stream' });
-  const url = URL.createObjectURL(blob);
 
-  // 方案 1: 系统分享菜单（Android PWA / 浏览器 均支持）
+  // 系统分享菜单（PWA / 浏览器 通用）
   if (navigator.share && navigator.canShare?.({ files: [file] })) {
-    try {
-      await navigator.share({ files: [file], title: '首饰数据库备份' });
-      URL.revokeObjectURL(url);
-      return;
-    } catch {
-      // 用户取消分享，继续尝试其他方案
-    }
+    await navigator.share({ files: [file], title: '首饰数据库备份' });
+    return;
   }
 
-  // 方案 2: 直接下载（桌面浏览器）
+  // 微信内置浏览器：无法导出
+  if (/MicroMessenger/i.test(navigator.userAgent)) {
+    throw new Error('微信内不支持下载，请点右上角「…」→「在浏览器中打开」');
+  }
+
+  // 兜底：浏览器直接下载
+  const blob = new Blob([data], { type: 'application/octet-stream' });
+  const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
   a.download = filename;
   a.style.display = 'none';
   document.body.appendChild(a);
   a.click();
-
-  // 给一点时间触发下载后清理
   setTimeout(() => {
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
