@@ -170,7 +170,7 @@ export default function Dashboard() {
 
       {/* PWA 安装提示 */}
       {canInstall && (
-        <div style={{ marginTop: 24, padding: '16px 0', borderTop: '1px solid #eee' }}>
+        <div style={{ marginTop: 24, padding: '16px 0 80px', borderTop: '1px solid #eee' }}>
           <div className="banner" style={{
             background: '#fff8e1', border: '1px solid #f9a825', borderRadius: 8,
             padding: 12, display: 'flex', alignItems: 'center', gap: 12,
