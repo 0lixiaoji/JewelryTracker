@@ -91,31 +91,6 @@ export default function Dashboard() {
     <div>
       <h2>仪表盘</h2>
 
-      {/* PWA 安装提示 */}
-      {canInstall && (
-        <div className="banner" style={{
-          background: '#fff8e1', border: '1px solid #f9a825', borderRadius: 8,
-          padding: 12, marginBottom: 16, display: 'flex', alignItems: 'center', gap: 12,
-        }}>
-          <span style={{ fontSize: '1.2rem' }}>📱</span>
-          <div style={{ flex: 1 }}>
-            <strong>添加到桌面</strong>
-            <p style={{ margin: 0, fontSize: '0.8rem', color: '#666' }}>
-              {isIOS
-                ? '点分享按钮 → 添加到主屏幕'
-                : hasNativePrompt
-                  ? '安装后像原生 App 一样使用'
-                  : '点 Chrome 右上菜单 → 添加到主屏幕'}
-            </p>
-          </div>
-          {!isIOS && hasNativePrompt && (
-            <button className="btn-sm" onClick={() => install().catch(() => {})}>
-              安装
-            </button>
-          )}
-        </div>
-      )}
-
       {/* 统计摘要 */}
       <div className="stat-bar">
         <div className="stat-item">
@@ -192,6 +167,33 @@ export default function Dashboard() {
           ver 7.30.6 · {import.meta.env.MODE}
         </p>
       </div>
+
+      {/* PWA 安装提示 */}
+      {canInstall && (
+        <div style={{ marginTop: 24, padding: '16px 0', borderTop: '1px solid #eee' }}>
+          <div className="banner" style={{
+            background: '#fff8e1', border: '1px solid #f9a825', borderRadius: 8,
+            padding: 12, display: 'flex', alignItems: 'center', gap: 12,
+          }}>
+            <span style={{ fontSize: '1.2rem' }}>📱</span>
+            <div style={{ flex: 1 }}>
+              <strong>添加到桌面</strong>
+              <p style={{ margin: 0, fontSize: '0.8rem', color: '#666' }}>
+                {isIOS
+                  ? '点分享按钮 → 添加到主屏幕'
+                  : hasNativePrompt
+                    ? '像一个原生 App 一样使用'
+                    : '点 Chrome 右上菜单 → 添加到主屏幕'}
+              </p>
+            </div>
+            {!isIOS && hasNativePrompt && (
+              <button className="btn-sm" onClick={() => install().catch(() => {})}>
+                安装
+              </button>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* 导出下载弹窗 */}
       {exportUrl && (
