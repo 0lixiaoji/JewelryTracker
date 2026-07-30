@@ -50,8 +50,9 @@ export default function Dashboard() {
 
   const handleExport = () => {
     try {
-      const url = exportDatabase();
-      setExportUrl(url);
+      const path = exportDatabase();
+      const fullUrl = window.location.origin + path;
+      setExportUrl(fullUrl);
     } catch (e) {
       notify(e instanceof Error ? e.message : '导出失败', 'error');
     }
@@ -192,31 +193,23 @@ export default function Dashboard() {
       {exportUrl && (
         <div className="confirm-overlay" onClick={() => setExportUrl('')}>
           <div className="confirm-box" onClick={(e) => e.stopPropagation()} style={{ maxWidth: 400 }}>
-            <h3 style={{ marginTop: 0 }}>📥 下载备份</h3>
+            <h3 style={{ marginTop: 0 }}>📥 导出数据库</h3>
             <p style={{ fontSize: '0.85rem', color: '#666', marginBottom: 16 }}>
-              点击下方按钮下载数据库文件
+              将在系统浏览器中打开下载页面
             </p>
-            <a
-              href={exportUrl}
-              download="jewelry-backup.db"
-              style={{
-                display: 'block', textAlign: 'center',
-                padding: '14px', background: '#2e7d32', color: '#fff',
-                borderRadius: 8, textDecoration: 'none', fontWeight: 600,
-                fontSize: '1rem', marginBottom: 12,
-              }}
+            <button
+              className="btn-sm"
+              style={{ width: '100%', padding: '14px', fontSize: '1rem', marginBottom: 8 }}
+              onClick={() => window.open(exportUrl, '_blank')}
             >
-              💾 下载 jewelry-backup.db
-            </a>
-            <p style={{ fontSize: '0.75rem', color: '#999', marginBottom: 12 }}>
-              如无法下载，请长按上方按钮 →「在浏览器中打开」
-            </p>
+              打开下载页面
+            </button>
             <button
               className="btn-outline btn-sm"
               style={{ width: '100%' }}
               onClick={() => setExportUrl('')}
             >
-              关闭
+              取消
             </button>
           </div>
         </div>

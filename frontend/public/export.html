@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>首饰管家 - 导出数据库</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: system-ui, sans-serif;
+      background: #fdf6f0; color: #333;
+      display: flex; flex-direction: column; align-items: center;
+      justify-content: center;
+      min-height: 100vh; padding: 24px;
+    }
+    .card {
+      background: #fff; border-radius: 12px; padding: 24px;
+      box-shadow: 0 2px 12px rgba(0,0,0,.1); max-width: 400px; width: 100%;
+      text-align: center;
+    }
+    h2 { margin-bottom: 16px; }
+    p { color: #666; font-size: 0.9rem; margin-bottom: 20px; }
+    .btn {
+      display: block; width: 100%; padding: 14px;
+      border: none; border-radius: 8px; font-size: 1rem; font-weight: 600;
+      cursor: pointer; margin-bottom: 12px; text-decoration: none;
+    }
+    .btn-download { background: #2e7d32; color: #fff; }
+    .btn-download:hover { background: #1b5e20; }
+    .error { color: #d32f2f; font-size: 0.85rem; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h2>📥 数据库导出</h2>
+    <p id="msg">正在准备下载文件…</p>
+    <a id="dl" class="btn btn-download" style="display:none">💾 点击下载</a>
+    <p id="err" class="error" style="display:none"></p>
+  </div>
+  <script>
+    (function() {
+      var data = localStorage.getItem('jewelry_export_data');
+      var filename = localStorage.getItem('jewelry_export_filename');
+
+      if (!data) {
+        document.getElementById('msg').textContent = '';
+        document.getElementById('err').textContent = '未找到导出的数据，请返回 App 重新导出';
+        document.getElementById('err').style.display = 'block';
+        return;
+      }
+
+      // 解码 base64
+      var binary = atob(data);
+      var bytes = new Uint8Array(binary.length);
+      for (var i = 0; i < binary.length; i++) {
+        bytes[i] = binary.charCodeAt(i);
+      }
+      var blob = new Blob([bytes], { type: 'application/octet-stream' });
+      var url = URL.createObjectURL(blob);
+
+      var dl = document.getElementById('dl');
+      dl.href = url;
+      dl.download = filename || 'jewelry-backup.db';
+      dl.style.display = 'block';
+      document.getElementById('msg').textContent = '文件已准备就绪';
+
+      // 自动触发下载
+      dl.click();
+
+      // 清理
+      localStorage.removeItem('jewelry_export_data');
+      localStorage.removeItem('jewelry_export_filename');
+    })();
+  </script>
+</body>
+</html>

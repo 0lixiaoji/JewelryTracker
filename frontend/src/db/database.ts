@@ -259,14 +259,19 @@ export function exportDatabase(): string {
   const database = getDBSync();
   const data = database.export();
 
-  // 转 base64
+  // 转 base64 存 localStorage，供 export.html 读取
   const bytes = new Uint8Array(data);
   let binary = '';
   for (let i = 0; i < bytes.length; i++) {
     binary += String.fromCharCode(bytes[i]);
   }
   const base64 = btoa(binary);
-  return `data:application/octet-stream;base64,${base64}`;
+  const filename = `jewelry-backup-${new Date().toISOString().slice(0, 10)}.db`;
+
+  localStorage.setItem('jewelry_export_data', base64);
+  localStorage.setItem('jewelry_export_filename', filename);
+
+  return `${import.meta.env.BASE_URL}export.html`;
 }
 
 /** 导入数据库文件，替换当前数据库 */
