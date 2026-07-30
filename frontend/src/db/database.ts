@@ -260,42 +260,49 @@ export async function exportDatabase(): Promise<void> {
   const database = getDBSync();
   const data = database.export();
   const filename = `jewelry-backup-${new Date().toISOString().slice(0, 10)}.db`;
-  const file = new File([data], filename, { type: 'application/octet-stream' });
+  const blob = new Blob([data], { type: 'application/octet-stream' });
+  const url = URL.createObjectURL(blob);
+
+  const cleanup = () => { try { URL.revokeObjectURL(url); } catch {} };
 
   // 微信拦截
   if (/MicroMessenger/i.test(navigator.userAgent)) {
+    cleanup();
     throw new Error('微信内不支持，请点右上角「…」→「在浏览器中打开」');
   }
 
-  // 尝试系统分享菜单
+  // 尝试系统分享（带 5 秒超时，防止卡死）
   if (navigator.share) {
+    const file = new File([data], filename, { type: 'application/octet-stream' });
     try {
-      await navigator.share({ files: [file], title: '首饰数据库备份' });
-      return; // 分享成功
+      await Promise.race([
+        navigator.share({ files: [file], title: '首饰数据库备份' }),
+        new Promise<void>((_, reject) =>
+          setTimeout(() => reject(new Error('timeout')), 5000),
+        ),
+      ]);
+      cleanup();
+      return;
     } catch (err) {
-      // AbortError = 用户取消，静默
-      if (err instanceof DOMException && err.name === 'AbortError') return;
-      // 其他错误（如不支持 files）→ 继续走下载
+      // timeout 或 API 不支持 → 继续走备用方案
+      if (err instanceof DOMException && err.name === 'AbortError') {
+        cleanup();
+        return; // 用户主动取消
+      }
     }
   }
 
-  // 兜底：浏览器直接下载
-  const isStandalone = window.matchMedia('(display-mode: standalone)').matches;
-  if (isStandalone) {
-    throw new Error('分享菜单不可用，请用浏览器打开导出');
-  }
-
-  const blob = new Blob([data], { type: 'application/octet-stream' });
-  const url = URL.createObjectURL(blob);
+  // 备用方案：Blob URL 直接下载
   const a = document.createElement('a');
   a.href = url;
   a.download = filename;
   a.style.display = 'none';
   document.body.appendChild(a);
   a.click();
+
   setTimeout(() => {
     document.body.removeChild(a);
-    URL.revokeObjectURL(url);
+    cleanup();
   }, 3000);
 }
 
