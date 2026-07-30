@@ -189,7 +189,7 @@ export default function Dashboard() {
           导出备份文件，换手机或重装后可导入恢复全部数据
         </p>
         <p style={{ fontSize: '0.7rem', color: '#bbb', marginTop: 4 }}>
-          ver 7.30.5 · {import.meta.env.MODE}
+          ver 7.30.6 · {import.meta.env.MODE}
         </p>
       </div>
 

@@ -10,10 +10,13 @@ export function usePWAInstall() {
   const [isInstalled, setIsInstalled] = useState(false);
 
   useEffect(() => {
-    if (window.matchMedia('(display-mode: standalone)').matches) {
-      setIsInstalled(true);
-      return;
-    }
+    // 多种方式检测是否已安装
+    const mediaQuery = window.matchMedia('(display-mode: standalone)');
+    const checkInstalled = () => {
+      if (mediaQuery.matches) setIsInstalled(true);
+    };
+    checkInstalled();
+    mediaQuery.addEventListener('change', checkInstalled);
 
     const handler = (e: Event) => {
       e.preventDefault();
@@ -24,6 +27,7 @@ export function usePWAInstall() {
     window.addEventListener('appinstalled', () => setIsInstalled(true));
 
     return () => {
+      mediaQuery.removeEventListener('change', checkInstalled);
       window.removeEventListener('beforeinstallprompt', handler);
     };
   }, []);
