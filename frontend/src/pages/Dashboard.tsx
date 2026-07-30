@@ -6,6 +6,7 @@ import LoadingSpinner from '../components/LoadingSpinner';
 import { useCategories } from '../contexts/CategoryContext';
 import { useNotification } from '../contexts/NotificationContext';
 import { exportDatabase, importDatabase } from '../db/database';
+import { usePWAInstall } from '../hooks/usePWAInstall';
 
 const CATEGORY_ICONS: Record<string, string> = {
   '发圈': '🎀',
@@ -27,6 +28,7 @@ export default function Dashboard() {
   const [confirmCat, setConfirmCat] = useState<{ id: number; name: string } | null>(null);
   const [importing, setImporting] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const { canInstall, install, isIOS } = usePWAInstall();
 
   const totalItems = categories.reduce((sum, c) => sum + c.item_count, 0);
   const canNormalizeAny = categories.some((c) => c.can_normalize);
@@ -86,6 +88,27 @@ export default function Dashboard() {
   return (
     <div>
       <h2>仪表盘</h2>
+
+      {/* PWA 安装提示 */}
+      {canInstall && (
+        <div className="banner" style={{
+          background: '#fff8e1', border: '1px solid #f9a825', borderRadius: 8,
+          padding: 12, marginBottom: 16, display: 'flex', alignItems: 'center', gap: 12,
+        }}>
+          <span style={{ fontSize: '1.2rem' }}>📱</span>
+          <div style={{ flex: 1 }}>
+            <strong>添加到桌面</strong>
+            <p style={{ margin: 0, fontSize: '0.8rem', color: '#666' }}>
+              {isIOS ? '点分享按钮 → 添加到主屏幕' : '安装后像原生 App 一样使用'}
+            </p>
+          </div>
+          {!isIOS && (
+            <button className="btn-sm" onClick={() => install().catch(() => {})}>
+              安装
+            </button>
+          )}
+        </div>
+      )}
 
       {/* 统计摘要 */}
       <div className="stat-bar">
