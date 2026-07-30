@@ -47,10 +47,23 @@ export default function Dashboard() {
     }
   };
 
+  const isWeChat = /MicroMessenger/i.test(navigator.userAgent);
+
   const handleExport = async () => {
+    // 微信内置浏览器：提示用系统浏览器打开
+    if (isWeChat) {
+      notify('请在微信中点右上角「…」→「在浏览器中打开」，再用导出功能', 'info');
+      return;
+    }
     try {
       await exportDatabase();
-      notify('已弹出分享菜单，可保存到文件或发送到微信备份', 'success');
+      // 根据环境给不同提示
+      const isStandalone = window.matchMedia('(display-mode: standalone)').matches;
+      if (isStandalone) {
+        notify('已弹出分享菜单，请选择「存储到文件」或发送到微信', 'success');
+      } else {
+        notify('下载中…如无反应请查看浏览器下载列表', 'success');
+      }
     } catch (e) {
       notify(e instanceof Error ? e.message : '导出失败', 'error');
     }

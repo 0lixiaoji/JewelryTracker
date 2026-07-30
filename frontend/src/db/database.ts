@@ -256,29 +256,38 @@ export function setupAutoSave(): void {
 
 /** 导出数据库为文件下载 */
 export async function exportDatabase(): Promise<void> {
-  await saveSnapshot(); // 先确保持久化
+  await saveSnapshot();
   const database = getDBSync();
   const data = database.export();
   const filename = `jewelry-backup-${new Date().toISOString().slice(0, 10)}.db`;
   const file = new File([data], filename, { type: 'application/octet-stream' });
-
-  // 优先使用系统分享菜单（手机原生体验）
-  if (navigator.share && navigator.canShare?.({ files: [file] })) {
-    await navigator.share({
-      files: [file],
-      title: '首饰数据库备份',
-    });
-    return;
-  }
-
-  // 桌面浏览器兜底：a.click 下载
   const blob = new Blob([data], { type: 'application/octet-stream' });
   const url = URL.createObjectURL(blob);
+
+  // 方案 1: 系统分享菜单（Android PWA / 浏览器 均支持）
+  if (navigator.share && navigator.canShare?.({ files: [file] })) {
+    try {
+      await navigator.share({ files: [file], title: '首饰数据库备份' });
+      URL.revokeObjectURL(url);
+      return;
+    } catch {
+      // 用户取消分享，继续尝试其他方案
+    }
+  }
+
+  // 方案 2: 直接下载（桌面浏览器）
   const a = document.createElement('a');
   a.href = url;
   a.download = filename;
+  a.style.display = 'none';
+  document.body.appendChild(a);
   a.click();
-  setTimeout(() => URL.revokeObjectURL(url), 1000);
+
+  // 给一点时间触发下载后清理
+  setTimeout(() => {
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }, 3000);
 }
 
 /** 导入数据库文件，替换当前数据库 */
