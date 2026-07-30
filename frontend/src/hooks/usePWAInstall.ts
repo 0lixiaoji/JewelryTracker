@@ -7,9 +7,13 @@ interface BeforeInstallPromptEvent extends Event {
 
 export function usePWAInstall() {
   // 同步检测是否已安装（避免首帧闪烁）
-  const [isInstalled, setIsInstalled] = useState(() =>
-    window.matchMedia('(display-mode: standalone)').matches
-  );
+  const [isInstalled, setIsInstalled] = useState(() => {
+    try {
+      return window.matchMedia('(display-mode: standalone)').matches;
+    } catch {
+      return false; // 兼容微信等特殊环境
+    }
+  });
   const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null);
 
   useEffect(() => {
