@@ -271,7 +271,8 @@ export function exportDatabase(): string {
   localStorage.setItem('jewelry_export_data', base64);
   localStorage.setItem('jewelry_export_filename', filename);
 
-  return `${import.meta.env.BASE_URL}export.html`;
+  // 使用 URL 构造函数正确解析相对路径（兼容 Capacitor file:// 协议）
+  return new URL(`${import.meta.env.BASE_URL}export.html`, window.location.href).href;
 }
 
 /** 导入数据库文件，替换当前数据库 */
@@ -381,5 +382,5 @@ export async function downloadBackup(filename: string): Promise<void> {
   }
   localStorage.setItem('jewelry_export_data', btoa(binary));
   localStorage.setItem('jewelry_export_filename', filename);
-  window.open(location.origin + import.meta.env.BASE_URL + 'export.html', '_blank');
+  window.open(new URL(import.meta.env.BASE_URL + 'export.html', window.location.href).href, '_blank');
 }

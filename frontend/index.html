@@ -2,16 +2,16 @@
 <html lang="zh-CN">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" href="/JewelryTracker/icon-192.png" />
-    <link rel="manifest" href="/JewelryTracker/manifest.json" />
-    <link rel="apple-touch-icon" href="/JewelryTracker/icon-192.png" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="icon" href="./icon-192.png" />
+    <link rel="manifest" href="./manifest.json" />
+    <link rel="apple-touch-icon" href="./icon-192.png" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <meta name="theme-color" content="#d4a574" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-title" content="首饰管家" />
     <title>首饰管家</title>
     <!-- 预加载 WASM，浏览器提前下载 -->
-    <link rel="preload" href="/JewelryTracker/sql-wasm-browser.wasm" as="fetch" crossorigin="anonymous" />
+    <link rel="preload" href="./sql-wasm-browser.wasm" as="fetch" crossorigin="anonymous" />
     <style>
       /* 首屏 loading，React 挂载后自动消失 */
       #preloader {
@@ -39,7 +39,7 @@
     <script type="module" src="/src/main.tsx"></script>
     <script>
       if ('serviceWorker' in navigator) {
-        navigator.serviceWorker.register('/JewelryTracker/sw.js').then(function(reg) {
+        navigator.serviceWorker.register('./sw.js').then(function(reg) {
           if (reg.waiting) reg.waiting.postMessage('skipWaiting');
           if (reg.installing) {
             reg.installing.addEventListener('statechange', function() {

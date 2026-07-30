@@ -1,4 +1,4 @@
-import { BrowserRouter, Route, Routes } from 'react-router-dom';
+import { HashRouter, Route, Routes } from 'react-router-dom';
 import Layout from './components/Layout';
 import NotificationToast from './components/NotificationToast';
 import { CategoryProvider } from './contexts/CategoryContext';
@@ -14,7 +14,8 @@ export default function App() {
   return (
     <NotificationProvider>
       <CategoryProvider>
-        <BrowserRouter basename={import.meta.env.BASE_URL.replace(/\/$/, '')}>
+        {/* HashRouter 兼容 Capacitor file:// 协议，无需服务端路由支持 */}
+        <HashRouter>
           <NotificationToast />
           <Routes>
             <Route element={<Layout />}>
@@ -25,7 +26,7 @@ export default function App() {
               <Route path="/history" element={<History />} />
             </Route>
           </Routes>
-        </BrowserRouter>
+        </HashRouter>
       </CategoryProvider>
     </NotificationProvider>
   );

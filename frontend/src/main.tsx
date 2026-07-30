@@ -1,18 +1,26 @@
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import App from './App';
+import { hideSplashScreen, setStatusBar } from './capacitor';
 import { autoBackup, initDatabase, setupAutoSave } from './db/database';
 
 // ── 启动时初始化数据库 + 自动保存 ──────────────────────────────
 
-initDatabase()
-  .then(() => {
-    setupAutoSave();
-    autoBackup(); // 每天自动备份
-  })
-  .catch((err) => {
-    console.error('数据库初始化失败:', err);
-  });
+Promise.all([
+  initDatabase()
+    .then(() => {
+      setupAutoSave();
+      autoBackup(); // 每天自动备份
+    })
+    .catch((err) => {
+      console.error('数据库初始化失败:', err);
+    }),
+  // Capacitor 原生：设置状态栏样式
+  setStatusBar('dark'),
+]).then(() => {
+  // App 就绪后隐藏启动页
+  hideSplashScreen();
+});
 
 // ── 渲染 ────────────────────────────────────────────────────────
 

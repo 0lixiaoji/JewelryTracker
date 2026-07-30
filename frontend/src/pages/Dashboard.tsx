@@ -66,8 +66,7 @@ export default function Dashboard() {
 
   const handleExport = () => {
     try {
-      const path = exportDatabase();
-      const fullUrl = window.location.origin + path;
+      const fullUrl = exportDatabase();
       setExportUrl(fullUrl);
     } catch (e) {
       notify(e instanceof Error ? e.message : '导出失败', 'error');

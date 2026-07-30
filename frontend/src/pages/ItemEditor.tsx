@@ -1,6 +1,7 @@
 import { useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { createItem } from '../api/client';
+import { isNative, pickFromGallery, takePhoto } from '../capacitor';
 import { useCategories } from '../contexts/CategoryContext';
 import { useNotification } from '../contexts/NotificationContext';
 
@@ -118,6 +119,32 @@ export default function ItemEditor() {
             <p style={{ fontSize: '0.75rem', marginTop: 4 }}>
               支持 JPG / PNG / GIF / WebP / BMP
             </p>
+            {isNative() && (
+              <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
+                <button
+                  type="button"
+                  className="btn-outline btn-sm"
+                  onClick={async (e) => {
+                    e.stopPropagation();
+                    const f = await takePhoto();
+                    if (f) handleFile(f);
+                  }}
+                >
+                  📸 拍照
+                </button>
+                <button
+                  type="button"
+                  className="btn-outline btn-sm"
+                  onClick={async (e) => {
+                    e.stopPropagation();
+                    const f = await pickFromGallery();
+                    if (f) handleFile(f);
+                  }}
+                >
+                  🖼️ 相册
+                </button>
+              </div>
+            )}
             <input
               ref={fileInputRef}
               type="file"
