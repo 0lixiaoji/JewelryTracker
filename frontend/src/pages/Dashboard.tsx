@@ -60,9 +60,9 @@ export default function Dashboard() {
       // 根据环境给不同提示
       const isStandalone = window.matchMedia('(display-mode: standalone)').matches;
       if (isStandalone) {
-        notify('已弹出分享菜单，请选择「存储到文件」或发送到微信', 'success');
+        notify('分享菜单已弹出 → 选「存储到文件」', 'success');
       } else {
-        notify('下载中…如无反应请查看浏览器下载列表', 'success');
+        notify('下载中…查看浏览器下载列表', 'success');
       }
     } catch (e) {
       notify(e instanceof Error ? e.message : '导出失败', 'error');
