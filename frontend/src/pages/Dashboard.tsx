@@ -48,7 +48,15 @@ export default function Dashboard() {
   const handleExport = async () => {
     try {
       await exportDatabase();
-      notify('数据库已导出', 'success');
+      const isIOS = /iPhone|iPad|iPod/.test(navigator.userAgent);
+      const isStandalone = window.matchMedia('(display-mode: standalone)').matches;
+      if (isStandalone) {
+        notify('文件已生成：jewelry-backup-*.db，请切换到浏览器打开同网址下载', 'success');
+      } else if (isIOS) {
+        notify('Safari 已弹出下载提示，请选择保存位置', 'success');
+      } else {
+        notify('已保存到手机「下载/Downloads」文件夹', 'success');
+      }
     } catch (e) {
       notify(e instanceof Error ? e.message : '导出失败', 'error');
     }
