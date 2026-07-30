@@ -161,7 +161,8 @@ export default function Dashboard() {
           </label>
         </div>
         <p style={{ fontSize: '0.75rem', color: '#999', marginTop: 8 }}>
-          导出备份文件，换手机或重装后可导入恢复全部数据
+          每天自动备份，保留最近 30 天 · 上次：
+          {localStorage.getItem('jewelry_last_backup_date') || '暂无'}
         </p>
         <p style={{ fontSize: '0.7rem', color: '#bbb', marginTop: 4 }}>
           ver 7.30.6 · {import.meta.env.MODE}

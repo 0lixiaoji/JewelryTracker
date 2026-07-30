@@ -301,3 +301,60 @@ export async function importDatabase(file: File): Promise<void> {
   dirty = true;
   await saveSnapshot();
 }
+
+// ── 自动备份 ──────────────────────────────────────────────────────
+
+const BACKUP_PREFIX = 'jewelry-backup-';
+const BACKUP_LIST_KEY = 'jewelry_backup_list';
+
+/** 每天自动备份一次，清理 30 天前的旧备份 */
+export async function autoBackup(): Promise<void> {
+  const lastBackup = localStorage.getItem('jewelry_last_backup_date');
+  const today = new Date().toISOString().slice(0, 10);
+
+  if (lastBackup === today) return;
+
+  try {
+    const database = getDBSync();
+    const data = database.export();
+    const filename = `${BACKUP_PREFIX}${today}.db`;
+
+    const root = await navigator.storage.getDirectory();
+    let backupsDir: FileSystemDirectoryHandle;
+    try {
+      backupsDir = await root.getDirectoryHandle('backups', { create: true });
+    } catch {
+      backupsDir = await root.getDirectoryHandle('backups', { create: true });
+    }
+
+    const handle = await backupsDir.getFileHandle(filename, { create: true });
+    const writable = await handle.createWritable();
+    await writable.write(data);
+    await writable.close();
+
+    localStorage.setItem('jewelry_last_backup_date', today);
+
+    // 记录备份文件
+    const list = JSON.parse(localStorage.getItem(BACKUP_LIST_KEY) ?? '[]') as string[];
+    list.push(filename);
+    localStorage.setItem(BACKUP_LIST_KEY, JSON.stringify(list));
+
+    // 清理 30 天前的旧备份
+    const cutoff = new Date();
+    cutoff.setDate(cutoff.getDate() - 30);
+    const cutoffStr = cutoff.toISOString().slice(0, 10);
+    const remaining: string[] = [];
+
+    for (const name of list) {
+      const dateStr = name.slice(BACKUP_PREFIX.length, -3);
+      if (dateStr < cutoffStr) {
+        await backupsDir.removeEntry(name).catch(() => {});
+      } else {
+        remaining.push(name);
+      }
+    }
+    localStorage.setItem(BACKUP_LIST_KEY, JSON.stringify(remaining));
+  } catch (err) {
+    console.warn('自动备份失败:', err);
+  }
+}
