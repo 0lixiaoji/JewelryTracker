@@ -255,25 +255,18 @@ export function setupAutoSave(): void {
 // ── 导出 / 导入 ──────────────────────────────────────────────────
 
 /** 导出数据库为文件下载 */
-export function exportDatabase(): void {
+export function exportDatabase(): string {
   const database = getDBSync();
   const data = database.export();
-  const blob = new Blob([data], { type: 'application/octet-stream' });
 
-  if (/MicroMessenger/i.test(navigator.userAgent)) {
-    throw new Error('微信内不支持，请点右上角「…」→「在浏览器中打开」');
+  // 转 base64
+  const bytes = new Uint8Array(data);
+  let binary = '';
+  for (let i = 0; i < bytes.length; i++) {
+    binary += String.fromCharCode(bytes[i]);
   }
-
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = 'jewelry-backup.db';
-  a.target = '_blank';
-  a.rel = 'noopener';
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
-  setTimeout(() => URL.revokeObjectURL(url), 10000);
+  const base64 = btoa(binary);
+  return `data:application/octet-stream;base64,${base64}`;
 }
 
 /** 导入数据库文件，替换当前数据库 */

@@ -27,6 +27,7 @@ export default function Dashboard() {
   const [normalizing, setNormalizing] = useState<number | null>(null);
   const [confirmCat, setConfirmCat] = useState<{ id: number; name: string } | null>(null);
   const [importing, setImporting] = useState(false);
+  const [exportUrl, setExportUrl] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { canInstall, install, isIOS } = usePWAInstall();
 
@@ -49,8 +50,8 @@ export default function Dashboard() {
 
   const handleExport = () => {
     try {
-      exportDatabase();
-      // document.location.href 会跳转，代码不会执行到这里
+      const url = exportDatabase();
+      setExportUrl(url);
     } catch (e) {
       notify(e instanceof Error ? e.message : '导出失败', 'error');
     }
@@ -186,6 +187,40 @@ export default function Dashboard() {
           ver 7.30.5 · {import.meta.env.MODE}
         </p>
       </div>
+
+      {/* 导出下载弹窗 */}
+      {exportUrl && (
+        <div className="confirm-overlay" onClick={() => setExportUrl('')}>
+          <div className="confirm-box" onClick={(e) => e.stopPropagation()} style={{ maxWidth: 400 }}>
+            <h3 style={{ marginTop: 0 }}>📥 下载备份</h3>
+            <p style={{ fontSize: '0.85rem', color: '#666', marginBottom: 16 }}>
+              点击下方按钮下载数据库文件
+            </p>
+            <a
+              href={exportUrl}
+              download="jewelry-backup.db"
+              style={{
+                display: 'block', textAlign: 'center',
+                padding: '14px', background: '#2e7d32', color: '#fff',
+                borderRadius: 8, textDecoration: 'none', fontWeight: 600,
+                fontSize: '1rem', marginBottom: 12,
+              }}
+            >
+              💾 下载 jewelry-backup.db
+            </a>
+            <p style={{ fontSize: '0.75rem', color: '#999', marginBottom: 12 }}>
+              如无法下载，请长按上方按钮 →「在浏览器中打开」
+            </p>
+            <button
+              className="btn-outline btn-sm"
+              style={{ width: '100%' }}
+              onClick={() => setExportUrl('')}
+            >
+              关闭
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* 归一化确认弹窗 */}
       <ConfirmDialog
