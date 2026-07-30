@@ -259,14 +259,26 @@ export async function exportDatabase(): Promise<void> {
   await saveSnapshot(); // 先确保持久化
   const database = getDBSync();
   const data = database.export();
+  const filename = `jewelry-backup-${new Date().toISOString().slice(0, 10)}.db`;
+  const file = new File([data], filename, { type: 'application/octet-stream' });
+
+  // 优先使用系统分享菜单（手机原生体验）
+  if (navigator.share && navigator.canShare?.({ files: [file] })) {
+    await navigator.share({
+      files: [file],
+      title: '首饰数据库备份',
+    });
+    return;
+  }
+
+  // 桌面浏览器兜底：a.click 下载
   const blob = new Blob([data], { type: 'application/octet-stream' });
   const url = URL.createObjectURL(blob);
-
   const a = document.createElement('a');
   a.href = url;
-  a.download = `jewelry-backup-${new Date().toISOString().slice(0, 10)}.db`;
+  a.download = filename;
   a.click();
-  URL.revokeObjectURL(url);
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 
 /** 导入数据库文件，替换当前数据库 */
