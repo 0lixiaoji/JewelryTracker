@@ -3,6 +3,8 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="manifest" href="/JewelryTracker/manifest.json">
+  <meta name="theme-color" content="#d4a574">
   <title>首饰管家 - 导出数据库</title>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -66,6 +68,11 @@
 
       // 自动触发下载
       dl.click();
+
+      // 2 秒后提示返回 App
+      setTimeout(function() {
+        document.getElementById('msg').innerHTML = '下载已触发，<a href="/JewelryTracker/">点此返回首饰管家</a>';
+      }, 2000);
 
       // 清理
       localStorage.removeItem('jewelry_export_data');

@@ -29,7 +29,7 @@ export default function Dashboard() {
   const [importing, setImporting] = useState(false);
   const [exportUrl, setExportUrl] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const { canInstall, install, isIOS } = usePWAInstall();
+  const { canInstall, install, isIOS, hasNativePrompt } = usePWAInstall();
 
   const totalItems = categories.reduce((sum, c) => sum + c.item_count, 0);
   const canNormalizeAny = categories.some((c) => c.can_normalize);
@@ -101,10 +101,14 @@ export default function Dashboard() {
           <div style={{ flex: 1 }}>
             <strong>添加到桌面</strong>
             <p style={{ margin: 0, fontSize: '0.8rem', color: '#666' }}>
-              {isIOS ? '点分享按钮 → 添加到主屏幕' : '安装后像原生 App 一样使用'}
+              {isIOS
+                ? '点分享按钮 → 添加到主屏幕'
+                : hasNativePrompt
+                  ? '安装后像原生 App 一样使用'
+                  : '点 Chrome 右上菜单 → 添加到主屏幕'}
             </p>
           </div>
-          {!isIOS && (
+          {!isIOS && hasNativePrompt && (
             <button className="btn-sm" onClick={() => install().catch(() => {})}>
               安装
             </button>

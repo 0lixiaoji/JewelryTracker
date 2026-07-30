@@ -10,7 +10,6 @@ export function usePWAInstall() {
   const [isInstalled, setIsInstalled] = useState(false);
 
   useEffect(() => {
-    // 检测是否已安装（standalone 模式）
     if (window.matchMedia('(display-mode: standalone)').matches) {
       setIsInstalled(true);
       return;
@@ -39,7 +38,9 @@ export function usePWAInstall() {
   };
 
   const isIOS = /iPhone|iPad|iPod/.test(navigator.userAgent);
-  const canInstall = !isInstalled && (deferredPrompt !== null || isIOS);
+  const isAndroid = /Android/i.test(navigator.userAgent);
+  // 已安装不显示，iOS/Android 未安装就显示
+  const canInstall = !isInstalled && (isIOS || isAndroid);
 
-  return { canInstall, install, isInstalled, isIOS, deferredPrompt };
+  return { canInstall, install, isInstalled, isIOS, isAndroid, hasNativePrompt: deferredPrompt !== null };
 }
