@@ -114,7 +114,7 @@ export async function initDatabase(): Promise<Database> {
   initPromise = (async () => {
     // 加载 sql.js WASM（Vite 会处理 .wasm 文件）
     SQL = await initSqlJs({
-      locateFile: (file: string) => `https://sql.js.org/dist/${file}`,
+      locateFile: (file: string) => `${import.meta.env.BASE_URL}${file}`,
     });
 
     // 尝试恢复已有数据库
