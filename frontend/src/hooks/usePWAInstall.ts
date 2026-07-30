@@ -6,28 +6,21 @@ interface BeforeInstallPromptEvent extends Event {
 }
 
 export function usePWAInstall() {
+  // 同步检测是否已安装（避免首帧闪烁）
+  const [isInstalled, setIsInstalled] = useState(() =>
+    window.matchMedia('(display-mode: standalone)').matches
+  );
   const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null);
-  const [isInstalled, setIsInstalled] = useState(false);
 
   useEffect(() => {
-    // 多种方式检测是否已安装
-    const mediaQuery = window.matchMedia('(display-mode: standalone)');
-    const checkInstalled = () => {
-      if (mediaQuery.matches) setIsInstalled(true);
-    };
-    checkInstalled();
-    mediaQuery.addEventListener('change', checkInstalled);
-
     const handler = (e: Event) => {
       e.preventDefault();
       setDeferredPrompt(e as BeforeInstallPromptEvent);
     };
 
     window.addEventListener('beforeinstallprompt', handler);
-    window.addEventListener('appinstalled', () => setIsInstalled(true));
 
     return () => {
-      mediaQuery.removeEventListener('change', checkInstalled);
       window.removeEventListener('beforeinstallprompt', handler);
     };
   }, []);
