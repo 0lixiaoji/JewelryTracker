@@ -263,47 +263,28 @@ export async function exportDatabase(): Promise<void> {
   const blob = new Blob([data], { type: 'application/octet-stream' });
   const url = URL.createObjectURL(blob);
 
-  const cleanup = () => { try { URL.revokeObjectURL(url); } catch {} };
-
   // 微信拦截
   if (/MicroMessenger/i.test(navigator.userAgent)) {
-    cleanup();
+    URL.revokeObjectURL(url);
     throw new Error('微信内不支持，请点右上角「…」→「在浏览器中打开」');
   }
 
-  // 尝试系统分享（带 5 秒超时，防止卡死）
-  if (navigator.share) {
-    const file = new File([data], filename, { type: 'application/octet-stream' });
-    try {
-      await Promise.race([
-        navigator.share({ files: [file], title: '首饰数据库备份' }),
-        new Promise<void>((_, reject) =>
-          setTimeout(() => reject(new Error('timeout')), 5000),
-        ),
-      ]);
-      cleanup();
-      return;
-    } catch (err) {
-      // timeout 或 API 不支持 → 继续走备用方案
-      if (err instanceof DOMException && err.name === 'AbortError') {
-        cleanup();
-        return; // 用户主动取消
-      }
-    }
+  // 直接用 window.open 触发系统下载（PWA/浏览器通用，最可靠）
+  // 在 Android 上会弹出下载管理器，iOS 上会打开文件预览
+  const w = window.open(url, '_blank');
+  if (!w) {
+    // 弹窗被拦截，用 a.click 兜底
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    a.style.display = 'none';
+    document.body.appendChild(a);
+    a.click();
+    setTimeout(() => document.body.removeChild(a), 1000);
   }
 
-  // 备用方案：Blob URL 直接下载
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = filename;
-  a.style.display = 'none';
-  document.body.appendChild(a);
-  a.click();
-
-  setTimeout(() => {
-    document.body.removeChild(a);
-    cleanup();
-  }, 3000);
+  // 延迟清理（等下载触发后）
+  setTimeout(() => URL.revokeObjectURL(url), 5000);
 }
 
 /** 导入数据库文件，替换当前数据库 */
