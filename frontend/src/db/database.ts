@@ -260,34 +260,20 @@ export function exportDatabase(): void {
   const data = database.export();
   const blob = new Blob([data], { type: 'application/octet-stream' });
 
-  // 微信拦截
   if (/MicroMessenger/i.test(navigator.userAgent)) {
     throw new Error('微信内不支持，请点右上角「…」→「在浏览器中打开」');
   }
 
   const url = URL.createObjectURL(blob);
-
-  // PWA 独立窗口：用 window.open 打开系统浏览器处理下载
-  const isStandalone = window.matchMedia('(display-mode: standalone)').matches;
-  if (isStandalone) {
-    const w = window.open(url, '_blank');
-    if (!w) {
-      // 弹窗被系统拦截 → 提示用户
-      throw new Error('弹窗被拦截，请用浏览器打开页面导出');
-    }
-    // 下载已交给系统浏览器处理
-    setTimeout(() => URL.revokeObjectURL(url), 10000);
-    return;
-  }
-
-  // 普通浏览器：直接下载
   const a = document.createElement('a');
   a.href = url;
   a.download = 'jewelry-backup.db';
+  a.target = '_blank';
+  a.rel = 'noopener';
   document.body.appendChild(a);
   a.click();
   document.body.removeChild(a);
-  setTimeout(() => URL.revokeObjectURL(url), 5000);
+  setTimeout(() => URL.revokeObjectURL(url), 10000);
 }
 
 /** 导入数据库文件，替换当前数据库 */
