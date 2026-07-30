@@ -8,13 +8,32 @@
  */
 
 import initSqlJs, { type Database, type SqlJsStatic } from 'sql.js';
-import { INIT_SQL } from './migration';
+import { INIT_SQL, MIGRATIONS } from './migration';
 
 // ── OPFS 存储配置 ─────────────────────────────────────────────────
 
 const DB_FILENAME = 'jewelry-tracker.db';
 const DB_META_KEY = 'jewelry_db_version';
-const DB_VERSION = 1;
+const DB_VERSION = 1; // schema version, track via localStorage key suffix
+
+/** 执行未应用的增量迁移 */
+function runMigrations(database: Database): void {
+  // 用 localStorage 追踪已应用的迁移版本
+  const appliedKey = `${DB_META_KEY}_migrations`;
+  const applied: number[] = JSON.parse(localStorage.getItem(appliedKey) ?? '[]');
+
+  for (const m of MIGRATIONS) {
+    if (applied.includes(m.version)) continue;
+    try {
+      database.exec(m.sql);
+      applied.push(m.version);
+      console.log(`Migration v${m.version}: ${m.description} ✓`);
+    } catch (err) {
+      console.warn(`Migration v${m.version} failed:`, err);
+    }
+  }
+  localStorage.setItem(appliedKey, JSON.stringify(applied));
+}
 
 // ── 全局单例 ──────────────────────────────────────────────────────
 
@@ -139,6 +158,9 @@ export async function initDatabase(): Promise<Database> {
       // 首次启动，创建新数据库
       db = createFresh();
     }
+
+    // 执行增量迁移
+    runMigrations(db);
 
     return db;
   })();

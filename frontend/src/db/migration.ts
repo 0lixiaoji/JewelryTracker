@@ -59,8 +59,8 @@ CREATE TABLE IF NOT EXISTS normalizations (
 /** 种子数据 — 9 个分类，与 MySQL 版本完全一致 */
 export const SEED_SQL = `
 INSERT OR IGNORE INTO categories (id, name_zh, sort_order) VALUES
-    (1, '发圈', 1),
-    (2, '发卡', 2),
+    (1, '发圈', 2),
+    (2, '发卡', 1),
     (3, '眼影', 3),
     (4, '耳环', 4),
     (5, '口红', 5),
@@ -76,3 +76,20 @@ PRAGMA foreign_keys = ON;
 ${MIGRATION_SQL}
 ${SEED_SQL}
 `;
+
+/** 增量迁移 — 按版本号顺序执行，每个只执行一次
+ *  新迁移追加到数组末尾，版本号递增 */
+export interface Migration {
+  version: number;
+  description: string;
+  sql: string;
+}
+
+export const MIGRATIONS: Migration[] = [
+  {
+    version: 2,
+    description: '发卡排在发圈前面',
+    sql: `UPDATE categories SET sort_order = 2 WHERE id = 1 AND sort_order = 1;
+          UPDATE categories SET sort_order = 1 WHERE id = 2 AND sort_order = 2;`,
+  },
+];
