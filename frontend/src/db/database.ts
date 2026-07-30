@@ -229,3 +229,48 @@ export function setupAutoSave(): void {
     }
   });
 }
+
+// ── 导出 / 导入 ──────────────────────────────────────────────────
+
+/** 导出数据库为文件下载 */
+export async function exportDatabase(): Promise<void> {
+  await saveSnapshot(); // 先确保持久化
+  const database = getDBSync();
+  const data = database.export();
+  const blob = new Blob([data], { type: 'application/octet-stream' });
+  const url = URL.createObjectURL(blob);
+
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `jewelry-backup-${new Date().toISOString().slice(0, 10)}.db`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+/** 导入数据库文件，替换当前数据库 */
+export async function importDatabase(file: File): Promise<void> {
+  if (!SQL) throw new Error('sql.js 未加载');
+
+  const buffer = await file.arrayBuffer();
+  const data = new Uint8Array(buffer);
+
+  // 验证是否为有效 SQLite 数据库
+  let newDb: Database | null = null;
+  try {
+    newDb = new SQL.Database(data);
+    // 验证关键表存在
+    newDb.exec('SELECT 1 FROM categories');
+  } catch {
+    try { newDb?.close(); } catch { /* ignore */ }
+    throw new Error('无效的数据库文件：缺少必要的表结构');
+  }
+
+  // 替换当前数据库（newDb 已通过验证，必非 null）
+  if (db) db.close();
+  db = newDb!;
+  db.run('PRAGMA foreign_keys = ON');
+
+  // 持久化
+  dirty = true;
+  await saveSnapshot();
+}

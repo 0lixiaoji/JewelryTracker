@@ -1,10 +1,11 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { normalizeCategory } from '../api/client';
 import ConfirmDialog from '../components/ConfirmDialog';
 import LoadingSpinner from '../components/LoadingSpinner';
 import { useCategories } from '../contexts/CategoryContext';
 import { useNotification } from '../contexts/NotificationContext';
+import { exportDatabase, importDatabase } from '../db/database';
 
 const CATEGORY_ICONS: Record<string, string> = {
   '发圈': '🎀',
@@ -24,6 +25,8 @@ export default function Dashboard() {
   const navigate = useNavigate();
   const [normalizing, setNormalizing] = useState<number | null>(null);
   const [confirmCat, setConfirmCat] = useState<{ id: number; name: string } | null>(null);
+  const [importing, setImporting] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const totalItems = categories.reduce((sum, c) => sum + c.item_count, 0);
   const canNormalizeAny = categories.some((c) => c.can_normalize);
@@ -39,6 +42,31 @@ export default function Dashboard() {
       notify(e instanceof Error ? e.message : '归一化失败', 'error');
     } finally {
       setNormalizing(null);
+    }
+  };
+
+  const handleExport = async () => {
+    try {
+      await exportDatabase();
+      notify('数据库已导出', 'success');
+    } catch (e) {
+      notify(e instanceof Error ? e.message : '导出失败', 'error');
+    }
+  };
+
+  const handleImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setImporting(true);
+    try {
+      await importDatabase(file);
+      notify('数据库导入成功，即将刷新', 'success');
+      setTimeout(() => window.location.reload(), 800);
+    } catch (err) {
+      notify(err instanceof Error ? err.message : '导入失败', 'error');
+    } finally {
+      setImporting(false);
+      if (fileInputRef.current) fileInputRef.current.value = '';
     }
   };
 
@@ -108,6 +136,29 @@ export default function Dashboard() {
             )}
           </div>
         ))}
+      </div>
+
+      {/* 数据备份 */}
+      <div style={{ marginTop: 32, padding: '16px 0', borderTop: '1px solid #eee' }}>
+        <h3 style={{ fontSize: '0.95rem', marginBottom: 12, color: '#666' }}>数据备份</h3>
+        <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
+          <button className="btn-outline btn-sm" onClick={handleExport}>
+            📥 导出数据库
+          </button>
+          <label className="btn-outline btn-sm" style={{ cursor: 'pointer' }}>
+            {importing ? '导入中…' : '📤 导入数据库'}
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept=".db"
+              onChange={handleImport}
+              hidden
+            />
+          </label>
+        </div>
+        <p style={{ fontSize: '0.75rem', color: '#999', marginTop: 8 }}>
+          导出备份文件，换手机或重装后可导入恢复全部数据
+        </p>
       </div>
 
       {/* 归一化确认弹窗 */}
