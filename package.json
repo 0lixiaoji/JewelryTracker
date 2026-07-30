@@ -10,6 +10,12 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "@nilsir/mcp-server-mysql": "^2.0.0"
+    "@nilsir/mcp-server-mysql": "^2.0.0",
+    "sql.js": "^1.14.1",
+    "vite-plugin-pwa": "^1.3.0",
+    "workbox-window": "^7.4.1"
+  },
+  "overrides": {
+    "lru-cache": "10.4.3"
   }
 }

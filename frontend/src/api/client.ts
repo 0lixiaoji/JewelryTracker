@@ -1,4 +1,8 @@
-/** API client — 原生 fetch 封装，每个 API 端点一个函数 */
+/** API client — 本地 sql.js 数据库调用（原 HTTP fetch → 本地 service）
+ *
+ * PWA 模式下所有数据存在浏览器本地 SQLite，不需要后端。
+ * 函数签名保持不变，现有页面组件无需改动。
+ */
 
 import type {
   CategoryWithStats,
@@ -9,84 +13,106 @@ import type {
   WearRecord,
 } from './types';
 
-const BASE = '/api';
+import { listCategories, getCategoryItems } from '../db/services/categories';
+import { createItem as dbCreateItem, updateItem as dbUpdateItem, deleteItem as dbDeleteItem } from '../db/services/items';
+import { createDailyWear as dbCreateDailyWear } from '../db/services/wear';
+import { normalizeCategory as dbNormalizeCategory } from '../db/services/normalization';
+import { listHistory as dbListHistory } from '../db/services/history';
+import { initDatabase } from '../db/database';
 
-// ── 通用 fetch 封装 ──────────────────────────────────────────────
+// ── 初始化标记 ────────────────────────────────────────────────────
 
-async function request<T>(
-  url: string,
-  options?: RequestInit,
-): Promise<T> {
-  // FormData 不手动设 Content-Type，让浏览器自动带 multipart boundary
-  const headers: Record<string, string> = {};
-  if (!(options?.body instanceof FormData)) {
-    headers['Content-Type'] = 'application/json';
+let initialized = false;
+
+async function ensureInit(): Promise<void> {
+  if (!initialized) {
+    await initDatabase();
+    initialized = true;
   }
+}
 
-  const res = await fetch(`${BASE}${url}`, {
-    ...options,
-    headers: { ...headers, ...(options?.headers as Record<string, string>) },
+// ── 辅助：读取 File 为 base64 ─────────────────────────────────────
+
+function readFileAsBase64(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result as string);
+    reader.onerror = () => reject(new Error('读取图片失败'));
+    reader.readAsDataURL(file);
   });
-  if (!res.ok) {
-    const detail = await res.json().catch(() => ({ detail: res.statusText }));
-    throw new Error(detail.detail ?? `HTTP ${res.status}`);
-  }
-  return res.json();
 }
 
 // ── 分类 ─────────────────────────────────────────────────────────
 
-export function fetchCategories(): Promise<CategoryWithStats[]> {
-  return request('/categories');
+export async function fetchCategories(): Promise<CategoryWithStats[]> {
+  await ensureInit();
+  return listCategories();
 }
 
-export function fetchCategoryItems(categoryId: number): Promise<Item[]> {
-  return request(`/categories/${categoryId}/items`);
+export async function fetchCategoryItems(categoryId: number): Promise<Item[]> {
+  await ensureInit();
+  return getCategoryItems(categoryId);
 }
 
 // ── 首饰 CRUD ────────────────────────────────────────────────────
 
-export function createItem(formData: FormData): Promise<Item> {
-  return request('/items', {
-    method: 'POST',
-    body: formData,
-  });
+export async function createItem(formData: FormData): Promise<Item> {
+  await ensureInit();
+
+  const categoryId = Number(formData.get('category_id'));
+  if (!categoryId || isNaN(categoryId)) {
+    throw new Error('缺少分类 ID');
+  }
+
+  const imageFile = formData.get('image');
+  if (!(imageFile instanceof File)) {
+    throw new Error('缺少图片文件');
+  }
+
+  // 验证格式
+  const allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/bmp'];
+  if (!allowedTypes.includes(imageFile.type) && imageFile.type !== '') {
+    throw new Error(`不支持的图片格式: ${imageFile.type}`);
+  }
+
+  const base64 = await readFileAsBase64(imageFile);
+  return dbCreateItem(categoryId, base64);
 }
 
-export function updateItem(
+export async function updateItem(
   itemId: number,
   categoryId: number,
 ): Promise<Item> {
-  return request(`/items/${itemId}`, {
-    method: 'PUT',
-    body: JSON.stringify({ category_id: categoryId }),
-  });
+  await ensureInit();
+  return dbUpdateItem(itemId, categoryId);
 }
 
-export function deleteItem(itemId: number): Promise<{ detail: string }> {
-  return request(`/items/${itemId}`, { method: 'DELETE' });
+export async function deleteItem(itemId: number): Promise<{ detail: string }> {
+  await ensureInit();
+  dbDeleteItem(itemId);
+  return { detail: `首饰 ${itemId} 已删除` };
 }
 
 // ── 每日佩戴 ─────────────────────────────────────────────────────
 
-export function createDailyWear(body: DailyWearCreate): Promise<WearRecord> {
-  return request('/daily-wear', {
-    method: 'POST',
-    body: JSON.stringify(body),
-  });
+export async function createDailyWear(body: DailyWearCreate): Promise<WearRecord> {
+  await ensureInit();
+  return dbCreateDailyWear(body);
 }
 
 // ── 归一化 ───────────────────────────────────────────────────────
 
-export function normalizeCategory(categoryId: number): Promise<Normalization> {
-  return request(`/categories/${categoryId}/normalize`, { method: 'POST' });
+export async function normalizeCategory(categoryId: number): Promise<Normalization> {
+  await ensureInit();
+  return dbNormalizeCategory(categoryId);
 }
 
 // ── 历史 ─────────────────────────────────────────────────────────
 
-export function fetchHistory(
+export async function fetchHistory(
   page: number = 1,
   pageSize: number = 20,
 ): Promise<HistoryPage> {
-  return request(`/history?page=${page}&page_size=${pageSize}`);
+  await ensureInit();
+  return dbListHistory(page, pageSize);
 }
