@@ -47,13 +47,11 @@ export default function Dashboard() {
     }
   };
 
-  const handleExport = async () => {
+  const handleExport = () => {
     try {
-      await exportDatabase();
-      // 分享菜单成功弹出，用户在原生界面操作，不需要额外提示
+      exportDatabase();
+      // document.location.href 会跳转，代码不会执行到这里
     } catch (e) {
-      // AbortError = 用户取消分享，不提示
-      if (e instanceof DOMException && e.name === 'AbortError') return;
       notify(e instanceof Error ? e.message : '导出失败', 'error');
     }
   };

@@ -255,36 +255,20 @@ export function setupAutoSave(): void {
 // ── 导出 / 导入 ──────────────────────────────────────────────────
 
 /** 导出数据库为文件下载 */
-export async function exportDatabase(): Promise<void> {
-  console.log('[export] v4 start');
+export function exportDatabase(): void {
   const database = getDBSync();
   const data = database.export();
-  console.log('[export] data size:', data.byteLength);
-
-  const filename = `jewelry-backup-${new Date().toISOString().slice(0, 10)}.db`;
   const blob = new Blob([data], { type: 'application/octet-stream' });
-  const url = URL.createObjectURL(blob);
 
   // 微信拦截
   if (/MicroMessenger/i.test(navigator.userAgent)) {
-    URL.revokeObjectURL(url);
     throw new Error('微信内不支持，请点右上角「…」→「在浏览器中打开」');
   }
 
-  // 创建下载链接并点击
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = filename;
-  document.body.appendChild(a);
-  console.log('[export] clicking download link');
-  a.click();
-  console.log('[export] clicked');
-
-  // 给浏览器时间触发下载
-  await new Promise((r) => setTimeout(r, 2000));
-  document.body.removeChild(a);
-  URL.revokeObjectURL(url);
-  console.log('[export] done');
+  // 直接导航到 blob URL — 强制触发浏览器下载（PWA 中也有效）
+  // 下载完成后用户可返回 App
+  const url = URL.createObjectURL(blob);
+  document.location.href = url;
 }
 
 /** 导入数据库文件，替换当前数据库 */
