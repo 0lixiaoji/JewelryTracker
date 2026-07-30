@@ -151,7 +151,8 @@ function createFresh(): Database {
   const database = new SQL.Database();
   database.run('PRAGMA foreign_keys = ON');
   database.exec(INIT_SQL);
-  // 标记需要保存
+  // 先赋值给模块级变量，再保存（saveSnapshot 依赖 db 非 null）
+  db = database;
   dirty = true;
   saveSnapshot();
   localStorage.setItem(DB_META_KEY, String(DB_VERSION));

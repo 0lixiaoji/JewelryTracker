@@ -7,7 +7,7 @@ import { useNotification } from '../contexts/NotificationContext';
 const ACCEPTED_TYPES = ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/bmp'];
 
 export default function ItemEditor() {
-  const { categories } = useCategories();
+  const { categories, loading, error } = useCategories();
   const { notify } = useNotification();
   const navigate = useNavigate();
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -72,6 +72,26 @@ export default function ItemEditor() {
   };
 
   const canSubmit = file && categoryId !== '';
+
+  // 加载中 / 错误提示
+  if (loading) {
+    return (
+      <div className="status-msg">
+        <p>正在加载分类数据…</p>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="status-msg error">
+        <p>加载分类失败：{error}</p>
+        <button className="btn-outline" onClick={() => window.location.reload()} style={{ marginTop: 12 }}>
+          刷新重试
+        </button>
+      </div>
+    );
+  }
 
   return (
     <div>
