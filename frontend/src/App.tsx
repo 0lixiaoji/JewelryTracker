@@ -14,7 +14,7 @@ export default function App() {
   return (
     <NotificationProvider>
       <CategoryProvider>
-        <BrowserRouter>
+        <BrowserRouter basename={import.meta.env.BASE_URL.replace(/\/$/, '')}>
           <NotificationToast />
           <Routes>
             <Route element={<Layout />}>
