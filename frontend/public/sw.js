@@ -1,4 +1,4 @@
-const CACHE_NAME = 'jewelry-v2';
+const CACHE_NAME = 'jewelry-v3';
 
 // 安装时预缓存核心资源（WASM + 图标）
 const PRE_CACHE = [

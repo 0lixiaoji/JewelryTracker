@@ -262,18 +262,29 @@ export async function exportDatabase(): Promise<void> {
   const filename = `jewelry-backup-${new Date().toISOString().slice(0, 10)}.db`;
   const file = new File([data], filename, { type: 'application/octet-stream' });
 
-  // 系统分享菜单（PWA / 浏览器 通用）
-  if (navigator.share && navigator.canShare?.({ files: [file] })) {
-    await navigator.share({ files: [file], title: '首饰数据库备份' });
-    return;
+  // 微信拦截
+  if (/MicroMessenger/i.test(navigator.userAgent)) {
+    throw new Error('微信内不支持，请点右上角「…」→「在浏览器中打开」');
   }
 
-  // 微信内置浏览器：无法导出
-  if (/MicroMessenger/i.test(navigator.userAgent)) {
-    throw new Error('微信内不支持下载，请点右上角「…」→「在浏览器中打开」');
+  // 尝试系统分享菜单
+  if (navigator.share) {
+    try {
+      await navigator.share({ files: [file], title: '首饰数据库备份' });
+      return; // 分享成功
+    } catch (err) {
+      // AbortError = 用户取消，静默
+      if (err instanceof DOMException && err.name === 'AbortError') return;
+      // 其他错误（如不支持 files）→ 继续走下载
+    }
   }
 
   // 兜底：浏览器直接下载
+  const isStandalone = window.matchMedia('(display-mode: standalone)').matches;
+  if (isStandalone) {
+    throw new Error('分享菜单不可用，请用浏览器打开导出');
+  }
+
   const blob = new Blob([data], { type: 'application/octet-stream' });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
