@@ -7,6 +7,7 @@
 
 import type { Item } from '../../api/types';
 import { getDBSync, markDirty } from '../database';
+import { deleteImage, isBase64 } from './imageStore';
 
 // ── 辅助 ──────────────────────────────────────────────────────────
 
@@ -111,11 +112,17 @@ export function updateItem(itemId: number, categoryId: number): Item {
   return rowToItem(row);
 }
 
-export function deleteItem(itemId: number): void {
+export async function deleteItem(itemId: number): Promise<void> {
   const db = getDBSync();
 
   const existing = getItemById(db, itemId);
   if (!existing) throw new Error(`首饰 ${itemId} 不存在`);
+
+  // 如果是文件存储（非 base64），清理 OPFS 中的图片文件
+  const imagePath = existing.image_path as string | null;
+  if (imagePath && !isBase64(imagePath)) {
+    await deleteImage(imagePath);
+  }
 
   db.run('DELETE FROM items WHERE id = :id', { ':id': itemId });
   markDirty();

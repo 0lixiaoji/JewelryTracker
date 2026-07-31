@@ -10,6 +10,7 @@
 import initSqlJs, { type Database, type SqlJsStatic } from 'sql.js';
 import { INIT_SQL, MIGRATIONS } from './migration';
 import { nativeSaveAndShare } from '../capacitor/index';
+import { initImageStore } from './services/imageStore';
 
 // ── OPFS 存储配置 ─────────────────────────────────────────────────
 
@@ -162,6 +163,9 @@ export async function initDatabase(): Promise<Database> {
 
     // 执行增量迁移
     runMigrations(db);
+
+    // 初始化图片文件存储目录
+    await initImageStore();
 
     return db;
   })();

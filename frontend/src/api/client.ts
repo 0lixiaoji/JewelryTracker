@@ -18,7 +18,8 @@ import { createItem as dbCreateItem, createItemsBatch as dbCreateItemsBatch, upd
 import { createDailyWear as dbCreateDailyWear } from '../db/services/wear';
 import { normalizeCategory as dbNormalizeCategory } from '../db/services/normalization';
 import { listHistory as dbListHistory } from '../db/services/history';
-import { initDatabase } from '../db/database';
+import { initDatabase, getDBSync } from '../db/database';
+import { getCategoryNextSequence, saveImageBatch } from '../db/services/imageStore';
 
 // ── 初始化标记 ────────────────────────────────────────────────────
 
@@ -40,6 +41,16 @@ function readFileAsBase64(file: File): Promise<string> {
     reader.onerror = () => reject(new Error('读取图片失败'));
     reader.readAsDataURL(file);
   });
+}
+
+/** 从数据库查询分类的 name_zh */
+function lookupCategoryName(categoryId: number): string {
+  const db = getDBSync();
+  const result = db.exec('SELECT name_zh FROM categories WHERE id = ' + categoryId);
+  if (!result.length || !result[0].values.length) {
+    throw new Error(`分类 ${categoryId} 不存在`);
+  }
+  return result[0].values[0][0] as string;
 }
 
 // ── 分类 ─────────────────────────────────────────────────────────
@@ -75,8 +86,22 @@ export async function createItem(formData: FormData): Promise<Item> {
     throw new Error(`不支持的图片格式: ${imageFile.type}`);
   }
 
-  const base64 = await readFileAsBase64(imageFile);
-  return dbCreateItem(categoryId, base64);
+  // 获取分类名称
+  const categoryName = lookupCategoryName(categoryId);
+
+  // 获取下一个编号
+  const sequences = await getCategoryNextSequence(categoryName, 1);
+
+  try {
+    // 优先写入 OPFS 文件存储
+    const filenames = await saveImageBatch(categoryName, [imageFile], sequences);
+    return dbCreateItem(categoryId, filenames[0]);
+  } catch (fsErr) {
+    // OPFS 不可用时 fallback 到 base64
+    console.warn('OPFS 图片存储失败，降级为 base64:', fsErr);
+    const base64 = await readFileAsBase64(imageFile);
+    return dbCreateItem(categoryId, base64);
+  }
 }
 
 export async function createItemsBatch(categoryId: number, files: File[]): Promise<Item[]> {
@@ -98,8 +123,22 @@ export async function createItemsBatch(categoryId: number, files: File[]): Promi
     }
   }
 
-  const base64s = await Promise.all(files.map((f) => readFileAsBase64(f)));
-  return dbCreateItemsBatch(categoryId, base64s);
+  // 获取分类名称
+  const categoryName = lookupCategoryName(categoryId);
+
+  // 获取下一组编号
+  const sequences = await getCategoryNextSequence(categoryName, files.length);
+
+  try {
+    // 优先写入 OPFS 文件存储
+    const filenames = await saveImageBatch(categoryName, files, sequences);
+    return dbCreateItemsBatch(categoryId, filenames);
+  } catch (fsErr) {
+    // OPFS 不可用时 fallback 到 base64
+    console.warn('OPFS 图片存储失败，降级为 base64:', fsErr);
+    const base64s = await Promise.all(files.map((f) => readFileAsBase64(f)));
+    return dbCreateItemsBatch(categoryId, base64s);
+  }
 }
 
 export async function updateItem(
@@ -112,7 +151,7 @@ export async function updateItem(
 
 export async function deleteItem(itemId: number): Promise<{ detail: string }> {
   await ensureInit();
-  dbDeleteItem(itemId);
+  await dbDeleteItem(itemId);
   return { detail: `首饰 ${itemId} 已删除` };
 }
 

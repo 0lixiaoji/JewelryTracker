@@ -4,6 +4,7 @@ import { useCategories } from '../contexts/CategoryContext';
 import { useNotification } from '../contexts/NotificationContext';
 import ImageWithFallback from '../components/ImageWithFallback';
 import LoadingSpinner from '../components/LoadingSpinner';
+import { getDisplayName } from '../db/services/imageStore';
 import type { Item, WearRecord } from '../api/types';
 
 /** 格式化今天日期 YYYY-MM-DD */
@@ -179,6 +180,11 @@ export default function DailyWear() {
                     >
                       🖼️
                     </div>
+                  )}
+                  {getDisplayName(item.image_path) && (
+                    <span style={{ fontSize: '0.7rem', color: '#666', marginTop: 2, display: 'block', textAlign: 'center' }}>
+                      {getDisplayName(item.image_path)}
+                    </span>
                   )}
                 </label>
               ))}

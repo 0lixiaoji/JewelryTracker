@@ -345,6 +345,24 @@ button:disabled { background: #aaa; cursor: not-allowed; }
   color: #999;
 }
 
+/* 图片从 OPFS 加载时的短暂占位 */
+.img-loading {
+  background: #f0f0f0;
+  background-image: linear-gradient(
+    90deg,
+    #f0f0f0 0%,
+    #e0e0e0 40%,
+    #f0f0f0 80%
+  );
+  background-size: 200% 100%;
+  animation: img-loading-shimmer 1.2s ease-in-out infinite;
+}
+
+@keyframes img-loading-shimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
 /* ── Modal ────────────────────────────────────────────── */
 .modal-overlay {
   position: fixed; inset: 0;

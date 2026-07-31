@@ -4,6 +4,7 @@ import EmptyState from '../components/EmptyState';
 import ImageWithFallback from '../components/ImageWithFallback';
 import LoadingSpinner from '../components/LoadingSpinner';
 import { useCategories } from '../contexts/CategoryContext';
+import { getDisplayName } from '../db/services/imageStore';
 import type { WearRecord } from '../api/types';
 
 /** 将 YYYY-MM-DD 转为友好的相对日期 */
@@ -95,7 +96,7 @@ export default function History() {
                         borderRadius: 3,
                       }}
                     >
-                      {getCategoryName(item.category_id)}
+                      {getDisplayName(item.image_path) ?? getCategoryName(item.category_id)}
                     </span>
                   </div>
                 ))}

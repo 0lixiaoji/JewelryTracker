@@ -7,6 +7,7 @@ import ImageWithFallback from '../components/ImageWithFallback';
 import LoadingSpinner from '../components/LoadingSpinner';
 import { useCategories } from '../contexts/CategoryContext';
 import { useNotification } from '../contexts/NotificationContext';
+import { getDisplayName } from '../db/services/imageStore';
 import type { Item } from '../api/types';
 
 export default function CategoryDetail() {
@@ -141,7 +142,12 @@ export default function CategoryDetail() {
 
               {/* 底部信息 */}
               <div className="item-meta">
-                <span style={{ fontSize: '0.8rem', color: '#666' }}>
+                {getDisplayName(item.image_path) && (
+                  <span style={{ fontSize: '0.8rem', fontWeight: 600, color: '#333' }}>
+                    {getDisplayName(item.image_path)}
+                  </span>
+                )}
+                <span style={{ fontSize: '0.75rem', color: '#999' }}>
                   佩戴 {item.usage_count} 次
                 </span>
               </div>
