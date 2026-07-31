@@ -95,6 +95,11 @@ export default function CategoryDetail() {
             {normalizing ? '归一化中…' : '归一化'}
           </button>
         )}
+        {items.length > 0 && (
+          <button className="btn-sm" onClick={() => navigate(`/items/new?categoryId=${categoryId}`)}>
+            + 录入首饰
+          </button>
+        )}
       </div>
 
       {/* 首饰网格 */}
