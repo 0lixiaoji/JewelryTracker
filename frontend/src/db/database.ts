@@ -9,6 +9,7 @@
 
 import initSqlJs, { type Database, type SqlJsStatic } from 'sql.js';
 import { INIT_SQL, MIGRATIONS } from './migration';
+import { nativeSaveAndShare } from '../capacitor/index';
 
 // ── OPFS 存储配置 ─────────────────────────────────────────────────
 
@@ -254,19 +255,30 @@ export function setupAutoSave(): void {
 
 // ── 导出 / 导入 ──────────────────────────────────────────────────
 
-/** 导出数据库为文件下载 */
-export function exportDatabase(): string {
+/**
+ * 导出数据库为文件。
+ *
+ * - **Capacitor 原生**：使用 Filesystem + Share 调用系统分享面板。
+ * - **Web 模式**：走 localStorage + export.html 的下载流程，返回 URL 供新窗口打开。
+ *
+ * @returns 如果是 Web 模式返回 export.html 的 URL；原生模式返回 null（已通过分享处理）
+ */
+export async function exportDatabase(): Promise<string | null> {
   const database = getDBSync();
   const data = database.export();
-
-  // 转 base64 存 localStorage，供 export.html 读取
   const bytes = new Uint8Array(data);
+  const filename = `jewelry-backup-${new Date().toISOString().slice(0, 10)}.db`;
+
+  // 尝试原生分享
+  const handled = await nativeSaveAndShare(bytes, filename);
+  if (handled) return null;
+
+  // Web 降级：转 base64 存 localStorage，供 export.html 读取
   let binary = '';
   for (let i = 0; i < bytes.length; i++) {
     binary += String.fromCharCode(bytes[i]);
   }
   const base64 = btoa(binary);
-  const filename = `jewelry-backup-${new Date().toISOString().slice(0, 10)}.db`;
 
   localStorage.setItem('jewelry_export_data', base64);
   localStorage.setItem('jewelry_export_filename', filename);
@@ -366,7 +378,7 @@ export function listBackups(): string[] {
   return list.filter((n) => n.startsWith(BACKUP_PREFIX) && n.endsWith('.db')).sort().reverse();
 }
 
-/** 下载指定日期的备份文件（通过 export.html） */
+/** 下载指定日期的备份文件 */
 export async function downloadBackup(filename: string): Promise<void> {
   const root = await navigator.storage.getDirectory();
   const backupsDir = await root.getDirectoryHandle('backups');
@@ -375,7 +387,11 @@ export async function downloadBackup(filename: string): Promise<void> {
   const buffer = await file.arrayBuffer();
   const bytes = new Uint8Array(buffer);
 
-  // 转 base64 存 localStorage，供 export.html 下载
+  // 尝试原生分享
+  const handled = await nativeSaveAndShare(bytes, filename);
+  if (handled) return;
+
+  // Web 降级：转 base64 存 localStorage，供 export.html 下载
   let binary = '';
   for (let i = 0; i < bytes.length; i++) {
     binary += String.fromCharCode(bytes[i]);

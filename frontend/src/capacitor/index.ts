@@ -148,3 +148,57 @@ export async function hideSplashScreen(): Promise<void> {
     // 静默失败
   }
 }
+
+// ── 文件导出 / 分享 ──────────────────────────────────────────────
+
+/**
+ * 将二进制数据保存为文件并通过系统分享面板导出。
+ *
+ * - **Capacitor 原生**：使用 Filesystem 写入临时文件，再调用 Share 弹出系统分享面板
+ *   （可 AirDrop / 保存到文件 / 发送到微信等）。
+ * - **Web 模式**：返回 false，由调用方走原有的 export.html 流程。
+ *
+ * @param data 文件二进制数据
+ * @param filename 文件名（如 `jewelry-backup-2026-07-31.db`）
+ * @returns true 表示已通过原生分享处理，false 表示需要走 Web 降级流程
+ */
+export async function nativeSaveAndShare(
+  data: Uint8Array,
+  filename: string,
+): Promise<boolean> {
+  if (!isNative()) return false;
+
+  try {
+    const { Filesystem, Directory } = await import('@capacitor/filesystem');
+    const { Share } = await import('@capacitor/share');
+
+    // 将二进制数据转为 base64
+    let binary = '';
+    for (let i = 0; i < data.length; i++) {
+      binary += String.fromCharCode(data[i]);
+    }
+    const base64 = btoa(binary);
+
+    // 写入临时文件
+    const result = await Filesystem.writeFile({
+      path: filename,
+      data: base64,
+      directory: Directory.Cache,
+    });
+
+    // 调用系统分享面板
+    await Share.share({
+      title: '导出数据库',
+      text: '首饰管家数据库备份',
+      url: result.uri,
+      dialogTitle: '分享数据库文件',
+    });
+
+    return true;
+  } catch (err) {
+    // 用户取消分享不算错误
+    if ((err as any)?.message?.includes?.('cancel')) return true;
+    console.warn('nativeSaveAndShare error:', err);
+    throw err;
+  }
+}

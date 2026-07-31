@@ -28,6 +28,7 @@ export default function Dashboard() {
   const [confirmCat, setConfirmCat] = useState<{ id: number; name: string } | null>(null);
   const [importing, setImporting] = useState(false);
   const [exportUrl, setExportUrl] = useState('');
+  const [exporting, setExporting] = useState(false);
   const [showBackups, setShowBackups] = useState(false);
   const [backupList, setBackupList] = useState<string[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -64,12 +65,21 @@ export default function Dashboard() {
     }
   };
 
-  const handleExport = () => {
+  const handleExport = async () => {
+    setExporting(true);
     try {
-      const fullUrl = exportDatabase();
-      setExportUrl(fullUrl);
+      const fullUrl = await exportDatabase();
+      if (fullUrl) {
+        // Web 模式：需要打开 export.html
+        setExportUrl(fullUrl);
+      } else {
+        // 原生模式：已通过系统分享面板处理
+        notify('已在系统分享面板中打开，请选择保存位置', 'success');
+      }
     } catch (e) {
       notify(e instanceof Error ? e.message : '导出失败', 'error');
+    } finally {
+      setExporting(false);
     }
   };
 
@@ -161,8 +171,8 @@ export default function Dashboard() {
       <div style={{ marginTop: 32, padding: '16px 0', borderTop: '1px solid #eee' }}>
         <h3 style={{ fontSize: '0.95rem', marginBottom: 12, color: '#666' }}>数据备份</h3>
         <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
-          <button className="btn-outline btn-sm" onClick={handleExport}>
-            📥 导出数据库
+          <button className="btn-outline btn-sm" onClick={handleExport} disabled={exporting}>
+            {exporting ? '⏳ 导出中…' : '📥 导出数据库'}
           </button>
           <button className="btn-outline btn-sm" onClick={handleShowBackups}>
             📂 查看备份
