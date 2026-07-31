@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { createItemsBatch } from '../api/client';
 import { isNative, pickFromGallery, takePhoto } from '../capacitor';
 import { useCategories } from '../contexts/CategoryContext';
@@ -14,9 +14,13 @@ export default function ItemEditor() {
   const { categories, loading, error } = useCategories();
   const { notify } = useNotification();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const [categoryId, setCategoryId] = useState<number | ''>('');
+  const [categoryId, setCategoryId] = useState<number | ''>(() => {
+    const param = searchParams.get('categoryId');
+    return param ? Number(param) : '';
+  });
   const [batchEntries, setBatchEntries] = useState<BatchEntry[]>([]);
   const [submitting, setSubmitting] = useState(false);
   const [dragOver, setDragOver] = useState(false);

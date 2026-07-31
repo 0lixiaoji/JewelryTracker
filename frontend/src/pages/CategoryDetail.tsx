@@ -100,7 +100,7 @@ export default function CategoryDetail() {
       {items.length === 0 ? (
         <EmptyState
           message="还没有首饰，快去录入吧"
-          action={{ label: '录入首饰', onClick: () => navigate('/items/new') }}
+          action={{ label: '录入首饰', onClick: () => navigate(`/items/new?categoryId=${categoryId}`) }}
         />
       ) : (
         <div className="item-grid">

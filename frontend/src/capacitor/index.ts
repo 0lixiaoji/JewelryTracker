@@ -59,6 +59,7 @@ export async function takePhoto(): Promise<File | null> {
       correctOrientation: true,
       width: 1024,
       height: 1024,
+      saveToGallery: true,
     });
 
     // 将 dataUrl 转为 File 对象（兼容现有 API）
