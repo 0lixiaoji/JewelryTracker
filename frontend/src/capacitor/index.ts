@@ -74,45 +74,48 @@ export async function takePhoto(): Promise<File | null> {
 }
 
 /**
- * 从相册选取图片，返回 File 对象。
- * Web 模式自动降级为浏览器文件选择器。
+ * 从相册选取图片（支持多选），返回 File 数组。
+ * Web 模式自动降级为浏览器文件选择器（multiple）。
+ * 原生 Android/iOS 使用 Camera.pickImages 支持多选。
  */
-export async function pickFromGallery(): Promise<File | null> {
+export async function pickFromGallery(): Promise<File[]> {
   if (!isNative()) {
+    // Web 降级：隐藏的 input[multiple] 支持多选
     return new Promise((resolve) => {
       const input = document.createElement('input');
       input.type = 'file';
       input.accept = 'image/*';
+      input.multiple = true;
       input.onchange = () => {
-        const file = input.files?.[0] ?? null;
-        resolve(file);
+        resolve(Array.from(input.files ?? []));
       };
-      input.oncancel = () => resolve(null);
+      input.oncancel = () => resolve([]);
       input.click();
     });
   }
 
+  // 原生环境：使用 Camera.pickImages 支持多选
   try {
-    const { Camera, CameraResultType, CameraSource } = await import(
-      '@capacitor/camera'
-    );
+    const { Camera } = await import('@capacitor/camera');
 
-    const photo = await Camera.getPhoto({
-      resultType: CameraResultType.DataUrl,
-      source: CameraSource.Photos,
+    const result = await Camera.pickImages({
       quality: 90,
-      correctOrientation: true,
       width: 1024,
       height: 1024,
     });
 
-    const res = await fetch(photo.dataUrl!);
-    const blob = await res.blob();
-    return new File([blob], `photo_${Date.now()}.jpg`, { type: 'image/jpeg' });
+    const files: File[] = [];
+    for (const photo of result.photos) {
+      const res = await fetch(photo.webPath);
+      const blob = await res.blob();
+      const ext = photo.format === 'png' ? 'png' : 'jpg';
+      files.push(new File([blob], `photo_${Date.now()}.${ext}`, { type: `image/${ext}` }));
+    }
+    return files;
   } catch (err) {
-    if ((err as any)?.message?.includes?.('cancel')) return null;
+    if ((err as any)?.message?.includes?.('cancel')) return [];
     console.warn('Gallery error:', err);
-    return null;
+    return [];
   }
 }
 

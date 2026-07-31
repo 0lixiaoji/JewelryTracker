@@ -14,7 +14,7 @@ import type {
 } from './types';
 
 import { listCategories, getCategoryItems } from '../db/services/categories';
-import { createItem as dbCreateItem, updateItem as dbUpdateItem, deleteItem as dbDeleteItem } from '../db/services/items';
+import { createItem as dbCreateItem, createItemsBatch as dbCreateItemsBatch, updateItem as dbUpdateItem, deleteItem as dbDeleteItem } from '../db/services/items';
 import { createDailyWear as dbCreateDailyWear } from '../db/services/wear';
 import { normalizeCategory as dbNormalizeCategory } from '../db/services/normalization';
 import { listHistory as dbListHistory } from '../db/services/history';
@@ -77,6 +77,29 @@ export async function createItem(formData: FormData): Promise<Item> {
 
   const base64 = await readFileAsBase64(imageFile);
   return dbCreateItem(categoryId, base64);
+}
+
+export async function createItemsBatch(categoryId: number, files: File[]): Promise<Item[]> {
+  await ensureInit();
+
+  if (!categoryId || isNaN(categoryId)) {
+    throw new Error('缺少分类 ID');
+  }
+
+  if (!files || files.length === 0) {
+    throw new Error('缺少图片文件');
+  }
+
+  // 验证格式
+  const allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/bmp'];
+  for (const f of files) {
+    if (!allowedTypes.includes(f.type) && f.type !== '') {
+      throw new Error(`不支持的图片格式: ${f.type}`);
+    }
+  }
+
+  const base64s = await Promise.all(files.map((f) => readFileAsBase64(f)));
+  return dbCreateItemsBatch(categoryId, base64s);
 }
 
 export async function updateItem(

@@ -54,6 +54,41 @@ export function createItem(categoryId: number, imageBase64: string): Item {
   return rowToItem(row);
 }
 
+export function createItemsBatch(categoryId: number, imageBase64s: string[]): Item[] {
+  if (imageBase64s.length === 0) return [];
+
+  const db = getDBSync();
+
+  // 验证分类存在
+  const cat = db.exec('SELECT id FROM categories WHERE id = ' + categoryId);
+  if (!cat.length || !cat[0].values.length) {
+    throw new Error(`分类 ${categoryId} 不存在`);
+  }
+
+  const stmt = db.prepare(
+    'INSERT INTO items (category_id, image_path) VALUES (:catId, :img)',
+  );
+  for (const img of imageBase64s) {
+    stmt.bind({ ':catId': categoryId, ':img': img });
+    stmt.step();
+    stmt.reset();
+  }
+  stmt.free();
+  markDirty();
+
+  // 取回刚插入的行
+  const result: Item[] = [];
+  const q = db.prepare(
+    'SELECT id, category_id, image_path, usage_count, created_at FROM items WHERE category_id = :catId ORDER BY id DESC LIMIT :limit',
+  );
+  q.bind({ ':catId': categoryId, ':limit': imageBase64s.length });
+  while (q.step()) {
+    result.unshift(rowToItem(q.getAsObject())); // unshift 保持插入顺序
+  }
+  q.free();
+  return result;
+}
+
 export function updateItem(itemId: number, categoryId: number): Item {
   const db = getDBSync();
 

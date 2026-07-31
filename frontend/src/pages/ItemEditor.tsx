@@ -1,11 +1,14 @@
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { createItem } from '../api/client';
+import { createItemsBatch } from '../api/client';
 import { isNative, pickFromGallery, takePhoto } from '../capacitor';
 import { useCategories } from '../contexts/CategoryContext';
 import { useNotification } from '../contexts/NotificationContext';
 
-const ACCEPTED_TYPES = ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/bmp'];
+interface BatchEntry {
+  file: File;
+  previewUrl: string;
+}
 
 export default function ItemEditor() {
   const { categories, loading, error } = useCategories();
@@ -14,25 +17,54 @@ export default function ItemEditor() {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [categoryId, setCategoryId] = useState<number | ''>('');
-  const [file, setFile] = useState<File | null>(null);
-  const [preview, setPreview] = useState<string | null>(null);
+  const [batchEntries, setBatchEntries] = useState<BatchEntry[]>([]);
   const [submitting, setSubmitting] = useState(false);
   const [dragOver, setDragOver] = useState(false);
 
-  // 处理文件选择
-  const handleFile = (f: File | null) => {
-    if (!f) return;
-    if (!ACCEPTED_TYPES.includes(f.type)) {
-      notify('不支持的图片格式，请选择 JPG/PNG/GIF/WebP/BMP', 'error');
-      return;
+  // ── 清理 object URL ────────────────────────────────────────
+  useEffect(() => {
+    return () => {
+      batchEntries.forEach((e) => URL.revokeObjectURL(e.previewUrl));
+    };
+  }, [batchEntries]);
+
+  // ── 添加文件（追加到现有列表） ──────────────────────────────
+  const addFiles = (newFiles: File[]) => {
+    const valid: BatchEntry[] = [];
+    let rejected = 0;
+    for (const f of newFiles) {
+      // 空 type 放行（部分设备拍照的 MIME 为空），非空时只要是 image/* 就放行
+      if (f.type !== '' && !f.type.startsWith('image/')) {
+        rejected++;
+        continue;
+      }
+      valid.push({ file: f, previewUrl: URL.createObjectURL(f) });
     }
-    // 清理旧预览
-    if (preview) URL.revokeObjectURL(preview);
-    setFile(f);
-    setPreview(URL.createObjectURL(f));
+    if (rejected > 0) {
+      notify(`已跳过 ${rejected} 个不支持的图片格式`, 'info');
+    }
+    if (valid.length > 0) {
+      setBatchEntries((prev) => [...prev, ...valid]);
+    }
   };
 
-  // 拖拽事件
+  // ── 移除单个预览 ────────────────────────────────────────────
+  const removeEntry = (index: number) => {
+    setBatchEntries((prev) => {
+      const entry = prev[index];
+      if (entry) URL.revokeObjectURL(entry.previewUrl);
+      return prev.filter((_, i) => i !== index);
+    });
+  };
+
+  // ── 清空全部 ────────────────────────────────────────────────
+  const clearAll = () => {
+    batchEntries.forEach((e) => URL.revokeObjectURL(e.previewUrl));
+    setBatchEntries([]);
+    if (fileInputRef.current) fileInputRef.current.value = '';
+  };
+
+  // ── 拖拽事件 ────────────────────────────────────────────────
   const handleDrag = (e: React.DragEvent, over: boolean) => {
     e.preventDefault();
     setDragOver(over);
@@ -41,29 +73,20 @@ export default function ItemEditor() {
   const handleDrop = (e: React.DragEvent) => {
     e.preventDefault();
     setDragOver(false);
-    handleFile(e.dataTransfer.files[0] ?? null);
+    const files = Array.from(e.dataTransfer.files);
+    if (files.length > 0) addFiles(files);
   };
 
-  // 清除文件
-  const clearFile = () => {
-    if (preview) URL.revokeObjectURL(preview);
-    setFile(null);
-    setPreview(null);
-    if (fileInputRef.current) fileInputRef.current.value = '';
-  };
-
-  // 提交
+  // ── 提交 ────────────────────────────────────────────────────
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!file || categoryId === '') return;
+    if (batchEntries.length === 0 || categoryId === '') return;
 
     setSubmitting(true);
     try {
-      const formData = new FormData();
-      formData.append('image', file);
-      formData.append('category_id', String(categoryId));
-      await createItem(formData);
-      notify('首饰已录入', 'success');
+      const files = batchEntries.map((e) => e.file);
+      await createItemsBatch(categoryId as number, files);
+      notify(`已录入 ${files.length} 件首饰`, 'success');
       navigate(`/categories/${categoryId}`);
     } catch (err) {
       notify(err instanceof Error ? err.message : '录入失败', 'error');
@@ -72,9 +95,10 @@ export default function ItemEditor() {
     }
   };
 
-  const canSubmit = file && categoryId !== '';
+  const canSubmit = batchEntries.length > 0 && categoryId !== '';
+  const hasEntries = batchEntries.length > 0;
 
-  // 加载中 / 错误提示
+  // ── 加载中 / 错误提示 ──────────────────────────────────────
   if (loading) {
     return (
       <div className="status-msg">
@@ -104,66 +128,96 @@ export default function ItemEditor() {
       </div>
 
       <form onSubmit={handleSubmit} className="item-form" style={{ maxWidth: 480 }}>
-        {/* 上传区域 */}
+        {/* ── 上传区域（始终可见，有预览时缩小） ── */}
         <label style={{ fontWeight: 600 }}>上传图片</label>
-        {!preview ? (
-          <div
-            className={`dropzone ${dragOver ? 'dropzone-active' : ''} ${file ? 'has-file' : ''}`}
-            onDragOver={(e) => handleDrag(e, true)}
-            onDragLeave={(e) => handleDrag(e, false)}
-            onDrop={handleDrop}
-            onClick={() => fileInputRef.current?.click()}
-          >
-            <span className="dropzone-icon">{dragOver ? '📥' : '📷'}</span>
-            <p>拖拽图片到这里，或点击选择</p>
-            <p style={{ fontSize: '0.75rem', marginTop: 4 }}>
-              支持 JPG / PNG / GIF / WebP / BMP
-            </p>
-            {isNative() && (
-              <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
-                <button
-                  type="button"
-                  className="btn-outline btn-sm"
-                  onClick={async (e) => {
-                    e.stopPropagation();
-                    const f = await takePhoto();
-                    if (f) handleFile(f);
-                  }}
-                >
-                  📸 拍照
-                </button>
-                <button
-                  type="button"
-                  className="btn-outline btn-sm"
-                  onClick={async (e) => {
-                    e.stopPropagation();
-                    const f = await pickFromGallery();
-                    if (f) handleFile(f);
-                  }}
-                >
-                  🖼️ 相册
-                </button>
-              </div>
-            )}
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept="image/*"
-              onChange={(e) => handleFile(e.target.files?.[0] ?? null)}
-            />
-          </div>
-        ) : (
-          <div className="preview">
-            <img src={preview} alt="预览" />
-            <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
-              <button type="button" className="btn-outline btn-sm" onClick={clearFile}>
-                重新选择
+        <div
+          className={`dropzone ${dragOver ? 'dropzone-active' : ''} ${hasEntries ? 'dropzone-compact' : ''}`}
+          onDragOver={(e) => handleDrag(e, true)}
+          onDragLeave={(e) => handleDrag(e, false)}
+          onDrop={handleDrop}
+          onClick={() => fileInputRef.current?.click()}
+        >
+          <span className="dropzone-icon">{dragOver ? '📥' : '📷'}</span>
+          {!hasEntries ? (
+            <>
+              <p>拖拽图片到这里，或点击选择</p>
+              <p style={{ fontSize: '0.75rem', marginTop: 4 }}>
+                支持 JPG / PNG / GIF / WebP / BMP，可多选
+              </p>
+            </>
+          ) : (
+            <p>点击或拖拽添加更多图片</p>
+          )}
+          {isNative() && (
+            <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
+              <button
+                type="button"
+                className="btn-outline btn-sm"
+                onClick={async (e) => {
+                  e.stopPropagation();
+                  const f = await takePhoto();
+                  if (f) addFiles([f]);
+                }}
+              >
+                📸 拍照
               </button>
+              <button
+                type="button"
+                className="btn-outline btn-sm"
+                onClick={async (e) => {
+                  e.stopPropagation();
+                  const files = await pickFromGallery();
+                  if (files.length > 0) addFiles(files);
+                }}
+              >
+                🖼️ 相册
+              </button>
+            </div>
+          )}
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/*"
+            multiple
+            onChange={(e) => {
+              const files = Array.from(e.target.files ?? []);
+              if (files.length > 0) addFiles(files);
+            }}
+          />
+        </div>
+
+        {/* ── 预览网格 ── */}
+        {hasEntries && (
+          <div className="batch-preview-section">
+            <div className="batch-preview-header">
+              <span className="batch-count">已选择 {batchEntries.length} 张图片</span>
+              <button type="button" className="btn-outline btn-sm" onClick={clearAll}>
+                清空全部
+              </button>
+            </div>
+            <div className="batch-preview-grid">
+              {batchEntries.map((entry, idx) => (
+                <div key={`${idx}-${entry.file.name}`} className="batch-preview-card">
+                  <img src={entry.previewUrl} alt={`预览 ${idx + 1}`} />
+                  <div className="batch-preview-actions">
+                    <button
+                      type="button"
+                      onClick={() => removeEntry(idx)}
+                      title="移除此图片"
+                    >
+                      ✕
+                    </button>
+                  </div>
+                  <div className="batch-preview-name" title={entry.file.name}>
+                    {entry.file.name}
+                  </div>
+                </div>
+              ))}
             </div>
           </div>
         )}
 
-        {/* 选择分类 */}
+        {/* ── 选择分类 ── */}
         <label style={{ fontWeight: 600 }}>
           选择分类
           <select
@@ -178,15 +232,15 @@ export default function ItemEditor() {
           </select>
         </label>
 
-        {/* 提交 */}
+        {/* ── 提交 ── */}
         <button type="submit" disabled={!canSubmit || submitting}>
-          {submitting ? '提交中…' : '录入'}
+          {submitting ? '提交中…' : hasEntries ? `录入 ${batchEntries.length} 件` : '录入'}
         </button>
         {!canSubmit && (
           <p style={{ color: '#999', fontSize: '0.8rem' }}>
-            {!file && !categoryId && '请上传图片并选择分类'}
-            {!file && categoryId !== '' && '请先上传图片'}
-            {file && categoryId === '' && '请先选择分类'}
+            {!hasEntries && categoryId === '' && '请上传图片并选择分类'}
+            {!hasEntries && categoryId !== '' && '请先上传图片'}
+            {hasEntries && categoryId === '' && '请先选择分类'}
           </p>
         )}
       </form>
