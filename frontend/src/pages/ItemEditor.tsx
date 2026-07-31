@@ -10,6 +10,12 @@ interface BatchEntry {
   previewUrl: string;
 }
 
+/** 需要细分的分类配置：分类名 → { 选项列表, 默认值 } */
+const CATEGORY_SUBTYPES: Record<string, { options: string[]; default: string }> = {
+  '手链': { options: ['手链', '手镯'], default: '手镯' },
+  '耳环': { options: ['耳环_h', '耳环_s'], default: '耳环_h' },
+};
+
 export default function ItemEditor() {
   const { categories, loading, error } = useCategories();
   const { notify } = useNotification();
@@ -21,6 +27,7 @@ export default function ItemEditor() {
     const param = searchParams.get('categoryId');
     return param ? Number(param) : '';
   });
+  const [subtypeName, setSubtypeName] = useState('');
   const [batchEntries, setBatchEntries] = useState<BatchEntry[]>([]);
   const [submitting, setSubmitting] = useState(false);
   const [dragOver, setDragOver] = useState(false);
@@ -31,6 +38,13 @@ export default function ItemEditor() {
       batchEntries.forEach((e) => URL.revokeObjectURL(e.previewUrl));
     };
   }, [batchEntries]);
+
+  // ── 切换分类时重置细分类型 ────────────────────────────────
+  useEffect(() => {
+    const catName = categories.find((c) => c.id === categoryId)?.name_zh ?? '';
+    const cfg = CATEGORY_SUBTYPES[catName];
+    setSubtypeName(cfg ? cfg.default : '');
+  }, [categoryId]);
 
   // ── 添加文件（追加到现有列表） ──────────────────────────────
   const addFiles = (newFiles: File[]) => {
@@ -89,7 +103,7 @@ export default function ItemEditor() {
     setSubmitting(true);
     try {
       const files = batchEntries.map((e) => e.file);
-      await createItemsBatch(categoryId as number, files);
+      await createItemsBatch(categoryId as number, files, subtypeName || undefined);
       notify(`已录入 ${files.length} 件首饰`, 'success');
       navigate(`/categories/${categoryId}`);
     } catch (err) {
@@ -99,7 +113,10 @@ export default function ItemEditor() {
     }
   };
 
-  const canSubmit = batchEntries.length > 0 && categoryId !== '';
+  const selectedCategoryName = categories.find((c) => c.id === categoryId)?.name_zh ?? '';
+  const subtypeConfig = CATEGORY_SUBTYPES[selectedCategoryName] ?? null;
+  const canSubmit = batchEntries.length > 0 && categoryId !== ''
+    && (!subtypeConfig || subtypeName !== '');
   const hasEntries = batchEntries.length > 0;
 
   // ── 加载中 / 错误提示 ──────────────────────────────────────
@@ -236,6 +253,23 @@ export default function ItemEditor() {
           </select>
         </label>
 
+        {/* ── 细分类型（手链 / 耳环等需要细分的分类） ── */}
+        {subtypeConfig && (
+          <label style={{ fontWeight: 600 }}>
+            细分类型
+            <select
+              value={subtypeName}
+              onChange={(e) => setSubtypeName(e.target.value)}
+              style={{ marginTop: 6 }}
+            >
+              <option value="">-- 请选择 --</option>
+              {subtypeConfig.options.map((opt) => (
+                <option key={opt} value={opt}>{opt}</option>
+              ))}
+            </select>
+          </label>
+        )}
+
         {/* ── 提交 ── */}
         <button type="submit" disabled={!canSubmit || submitting}>
           {submitting ? '提交中…' : hasEntries ? `录入 ${batchEntries.length} 件` : '录入'}
@@ -245,6 +279,7 @@ export default function ItemEditor() {
             {!hasEntries && categoryId === '' && '请上传图片并选择分类'}
             {!hasEntries && categoryId !== '' && '请先上传图片'}
             {hasEntries && categoryId === '' && '请先选择分类'}
+            {hasEntries && subtypeConfig && subtypeName === '' && categoryId !== '' && `请选择细分类型（${subtypeConfig.options.join(' / ')}）`}
           </p>
         )}
       </form>

@@ -67,7 +67,7 @@ export async function fetchCategoryItems(categoryId: number): Promise<Item[]> {
 
 // ── 首饰 CRUD ────────────────────────────────────────────────────
 
-export async function createItem(formData: FormData): Promise<Item> {
+export async function createItem(formData: FormData, subtypeName?: string): Promise<Item> {
   await ensureInit();
 
   const categoryId = Number(formData.get('category_id'));
@@ -86,8 +86,8 @@ export async function createItem(formData: FormData): Promise<Item> {
     throw new Error(`不支持的图片格式: ${imageFile.type}`);
   }
 
-  // 获取分类名称
-  const categoryName = lookupCategoryName(categoryId);
+  // 获取分类名称（若有细分类型则使用细分名作为文件前缀）
+  const categoryName = subtypeName || lookupCategoryName(categoryId);
 
   // 获取下一个编号
   const sequences = await getCategoryNextSequence(categoryName, 1);
@@ -104,7 +104,7 @@ export async function createItem(formData: FormData): Promise<Item> {
   }
 }
 
-export async function createItemsBatch(categoryId: number, files: File[]): Promise<Item[]> {
+export async function createItemsBatch(categoryId: number, files: File[], subtypeName?: string): Promise<Item[]> {
   await ensureInit();
 
   if (!categoryId || isNaN(categoryId)) {
@@ -123,8 +123,8 @@ export async function createItemsBatch(categoryId: number, files: File[]): Promi
     }
   }
 
-  // 获取分类名称
-  const categoryName = lookupCategoryName(categoryId);
+  // 获取分类名称（若有细分类型则使用细分名作为文件前缀）
+  const categoryName = subtypeName || lookupCategoryName(categoryId);
 
   // 获取下一组编号
   const sequences = await getCategoryNextSequence(categoryName, files.length);
