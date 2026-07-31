@@ -171,7 +171,7 @@ export default function DailyWear() {
                     disabled={!!todayRecord}
                   />
                   {item.image_path ? (
-                    <ImageWithFallback src={`/${item.image_path}`} alt="" />
+                    <ImageWithFallback src={item.image_path} alt="" />
                   ) : (
                     <div
                       className="img-fallback"

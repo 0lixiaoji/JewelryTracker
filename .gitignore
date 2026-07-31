@@ -7,3 +7,4 @@ backend/uploads/*
 dist/
 .vite/
 venv/
+frontend/android/.idea/

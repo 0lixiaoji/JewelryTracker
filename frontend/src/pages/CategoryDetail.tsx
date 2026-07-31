@@ -134,7 +134,7 @@ export default function CategoryDetail() {
 
               {/* 图片 */}
               {item.image_path ? (
-                <ImageWithFallback src={`/${item.image_path}`} alt="" />
+                <ImageWithFallback src={item.image_path} alt="" />
               ) : (
                 <div className="img-fallback" style={{ aspectRatio: '1' }}>🖼️</div>
               )}

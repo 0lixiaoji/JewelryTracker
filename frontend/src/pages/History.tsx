@@ -79,7 +79,7 @@ export default function History() {
                 {rec.items.map((item) => (
                   <div key={item.id} className="history-item" style={{ position: 'relative' }}>
                     {item.image_path ? (
-                      <ImageWithFallback src={`/${item.image_path}`} alt="" />
+                      <ImageWithFallback src={item.image_path} alt="" />
                     ) : (
                       <div className="img-fallback" style={{ width: 60, height: 60 }}>🖼️</div>
                     )}
