@@ -6,7 +6,7 @@ import LoadingSpinner from '../components/LoadingSpinner';
 import { useCategories } from '../contexts/CategoryContext';
 import { useNotification } from '../contexts/NotificationContext';
 import { downloadBackup, exportDatabase, importDatabase, listBackups } from '../db/database';
-import { usePWAInstall } from '../hooks/usePWAInstall';
+
 
 const CATEGORY_ICONS: Record<string, string> = {
   '发圈': '🎀',
@@ -31,7 +31,7 @@ export default function Dashboard() {
   const [showBackups, setShowBackups] = useState(false);
   const [backupList, setBackupList] = useState<string[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const { canInstall, install, isIOS, hasNativePrompt } = usePWAInstall();
+
 
   const totalItems = categories.reduce((sum, c) => sum + c.item_count, 0);
   const canNormalizeAny = categories.some((c) => c.can_normalize);
@@ -187,25 +187,7 @@ export default function Dashboard() {
         </p>
       </div>
 
-      {/* PWA 安装提示 */}
-      {canInstall && (
-        <div style={{ marginTop: 24, padding: '16px 0 80px', borderTop: '1px solid #eee' }}>
-          <div className="banner" style={{
-            background: '#fff8e1', border: '1px solid #f9a825', borderRadius: 8,
-            padding: 12, display: 'flex', alignItems: 'center', gap: 12,
-          }}>
-            <span style={{ fontSize: '1.2rem' }}>📱</span>
-            <div style={{ flex: 1 }}>
-              <strong>添加到桌面</strong>
-            </div>
-            {!isIOS && hasNativePrompt && (
-              <button className="btn-sm" onClick={() => install().catch(() => {})}>
-                安装
-              </button>
-            )}
-          </div>
-        </div>
-      )}
+
 
       {/* 备份列表弹窗 */}
       {showBackups && (
