@@ -8,3 +8,4 @@ dist/
 .vite/
 venv/
 frontend/android/.idea/
+*.apk

@@ -70,7 +70,7 @@ export async function createItem(formData: FormData): Promise<Item> {
   }
 
   // 验证格式
-  const allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/bmp'];
+  const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp', 'image/bmp'];
   if (!allowedTypes.includes(imageFile.type) && imageFile.type !== '') {
     throw new Error(`不支持的图片格式: ${imageFile.type}`);
   }
@@ -91,7 +91,7 @@ export async function createItemsBatch(categoryId: number, files: File[]): Promi
   }
 
   // 验证格式
-  const allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/bmp'];
+  const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp', 'image/bmp'];
   for (const f of files) {
     if (!allowedTypes.includes(f.type) && f.type !== '') {
       throw new Error(`不支持的图片格式: ${f.type}`);
