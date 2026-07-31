@@ -15,7 +15,7 @@ import type {
 
 import { listCategories, getCategoryItems } from '../db/services/categories';
 import { createItem as dbCreateItem, createItemsBatch as dbCreateItemsBatch, updateItem as dbUpdateItem, deleteItem as dbDeleteItem } from '../db/services/items';
-import { createDailyWear as dbCreateDailyWear } from '../db/services/wear';
+import { createDailyWear as dbCreateDailyWear, updateDailyWear as dbUpdateDailyWear } from '../db/services/wear';
 import { normalizeCategory as dbNormalizeCategory } from '../db/services/normalization';
 import { listHistory as dbListHistory } from '../db/services/history';
 import { initDatabase, getDBSync } from '../db/database';
@@ -160,6 +160,11 @@ export async function deleteItem(itemId: number): Promise<{ detail: string }> {
 export async function createDailyWear(body: DailyWearCreate): Promise<WearRecord> {
   await ensureInit();
   return dbCreateDailyWear(body);
+}
+
+export async function updateDailyWear(recordId: number, body: DailyWearCreate): Promise<WearRecord> {
+  await ensureInit();
+  return dbUpdateDailyWear(recordId, body);
 }
 
 // ── 归一化 ───────────────────────────────────────────────────────

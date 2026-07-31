@@ -17,11 +17,11 @@ items 表不设 name/updated_at 字段，用户纯靠图片辨认每件首饰。
 
 **Why:** 避免 usage_count 无限增长，同时保留佩戴比例信息。
 
-## 每日佩戴不覆盖
+## 每日佩戴可修改
 
-每次 POST 提交创建新 wear_record，不检查、不覆盖当天已有记录。提交后选中首饰 usage_count 自动 +1。
+每日佩戴提交后创建 wear_record，usage_count +1。当日再次进入 DailyWear 页面可修改已选首饰：修改会回退旧首饰 usage_count 并增加新首饰 usage_count，worn_at 保持不变。
 
-**Why:** 简化逻辑，每次都是新增记录。
+**Why:** 用户可能在记录后发现选错，需要当天修改能力。每天仍只有一条记录，不会重复创建。
 
 ## 单人无认证
 

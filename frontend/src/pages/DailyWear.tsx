@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { createDailyWear, fetchCategoryItems, fetchHistory } from '../api/client';
+import { createDailyWear, updateDailyWear, fetchCategoryItems, fetchHistory } from '../api/client';
 import { useCategories } from '../contexts/CategoryContext';
 import { useNotification } from '../contexts/NotificationContext';
 import ImageWithFallback from '../components/ImageWithFallback';
@@ -70,17 +70,15 @@ export default function DailyWear() {
 
   useEffect(() => { load(); }, [load]);
 
-  // 切换选中
+  // 切换选中 — 今天已记录时也可以修改
   const toggleItem = (categoryId: number, itemId: number) => {
-    // 如果今日已提交，不允许修改
-    if (todayRecord) return;
     setSelections((prev) => ({
       ...prev,
       [categoryId]: prev[categoryId] === itemId ? null : itemId,
     }));
   };
 
-  // 提交
+  // 提交（创建或更新）
   const handleSubmit = async () => {
     const items = Object.entries(selections)
       .filter(([, itemId]) => itemId !== null)
@@ -96,11 +94,19 @@ export default function DailyWear() {
 
     setSubmitting(true);
     try {
-      const rec = await createDailyWear({ items });
-      setTodayRecord(rec);
-      notify('今日佩戴已记录', 'success');
+      if (todayRecord) {
+        // 修改今日记录
+        const rec = await updateDailyWear(todayRecord.id, { items });
+        setTodayRecord(rec);
+        notify('今日佩戴已更新', 'success');
+      } else {
+        // 新建今日记录
+        const rec = await createDailyWear({ items });
+        setTodayRecord(rec);
+        notify('今日佩戴已记录', 'success');
+      }
     } catch (e) {
-      notify(e instanceof Error ? e.message : '记录失败', 'error');
+      notify(e instanceof Error ? e.message : '操作失败', 'error');
     } finally {
       setSubmitting(false);
     }
@@ -118,8 +124,8 @@ export default function DailyWear() {
       </div>
 
       {todayRecord && (
-        <p style={{ color: '#e65100', fontSize: '0.9rem', marginBottom: 16 }}>
-          今日已提交佩戴记录，明天再来吧。
+        <p style={{ color: '#2e7d32', fontSize: '0.9rem', marginBottom: 16 }}>
+          今日已记录，可修改后重新提交。
         </p>
       )}
 
@@ -141,7 +147,6 @@ export default function DailyWear() {
               {/* 不选 */}
               <label
                 className={`picker-item none ${!selections[cat.id] ? 'selected' : ''}`}
-                style={{ opacity: todayRecord ? 0.5 : 1 }}
               >
                 <input
                   type="radio"
@@ -150,7 +155,6 @@ export default function DailyWear() {
                   onChange={() =>
                     setSelections((prev) => ({ ...prev, [cat.id]: null }))
                   }
-                  disabled={!!todayRecord}
                 />
                 不戴
               </label>
@@ -162,14 +166,12 @@ export default function DailyWear() {
                   className={`picker-item ${
                     selections[cat.id] === item.id ? 'selected' : ''
                   }`}
-                  style={{ opacity: todayRecord ? 0.5 : 1 }}
                 >
                   <input
                     type="radio"
                     name={`cat-${cat.id}`}
                     checked={selections[cat.id] === item.id}
                     onChange={() => toggleItem(cat.id, item.id)}
-                    disabled={!!todayRecord}
                   />
                   {item.image_path ? (
                     <ImageWithFallback src={item.image_path} alt="" />
@@ -193,17 +195,19 @@ export default function DailyWear() {
         </div>
       ))}
 
-      {/* 底部提交栏 */}
-      {!todayRecord && (
-        <div className="submit-bar">
-          <span className="selected-count">
-            已选 {selectedCount} / {categories.length} 类
-          </span>
-          <button disabled={submitting || selectedCount === 0} onClick={handleSubmit}>
-            {submitting ? '提交中…' : '提交今日佩戴'}
-          </button>
-        </div>
-      )}
+      {/* 底部提交栏 — 始终显示，支持创建和修改 */}
+      <div className="submit-bar">
+        <span className="selected-count">
+          已选 {selectedCount} / {categories.length} 类
+        </span>
+        <button disabled={submitting || selectedCount === 0} onClick={handleSubmit}>
+          {submitting
+            ? '提交中…'
+            : todayRecord
+              ? '更新今日佩戴'
+              : '提交今日佩戴'}
+        </button>
+      </div>
     </div>
   );
 }
