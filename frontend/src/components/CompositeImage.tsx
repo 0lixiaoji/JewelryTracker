@@ -223,6 +223,10 @@ export default function CompositeImage({
 
   const handleClick = useCallback(
     (e: React.MouseEvent<HTMLDivElement>) => {
+      // 同步提取坐标，避免 setTimeout 中 event 被回收
+      const clientX = e.clientX;
+      const clientY = e.clientY;
+
       // 双击判断：延迟执行单击，如果短时间内有双击则取消
       if (clickTimerRef.current) {
         clearTimeout(clickTimerRef.current);
@@ -237,8 +241,8 @@ export default function CompositeImage({
         const rect = imgRef.current.getBoundingClientRect();
         const scaleX = rect.width / imageSize.w;
         const scaleY = rect.height / imageSize.h;
-        const canvasX = (e.clientX - rect.left) / scaleX;
-        const canvasY = (e.clientY - rect.top) / scaleY;
+        const canvasX = (clientX - rect.left) / scaleX;
+        const canvasY = (clientY - rect.top) / scaleY;
 
         const col = Math.floor(canvasX / CELL_SIZE);
         const row = Math.floor(canvasY / CELL_SIZE);
