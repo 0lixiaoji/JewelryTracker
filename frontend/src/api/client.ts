@@ -63,6 +63,15 @@ function parseSequenceFromFilename(filename: string): number {
   return isNaN(num) ? 1 : num;
 }
 
+/** 从 OPFS 文件名解析前缀，如 手镯_10.jpg → 手镯 */
+function parsePrefixFromFilename(filename: string): string {
+  const dotIdx = filename.lastIndexOf('.');
+  const nameWithoutExt = dotIdx > 0 ? filename.slice(0, dotIdx) : filename;
+  const lastUnderscoreIdx = nameWithoutExt.lastIndexOf('_');
+  if (lastUnderscoreIdx < 0) return nameWithoutExt;
+  return nameWithoutExt.slice(0, lastUnderscoreIdx);
+}
+
 // ── 分类 ─────────────────────────────────────────────────────────
 
 export async function fetchCategories(): Promise<CategoryWithStats[]> {
@@ -212,7 +221,8 @@ export async function replaceItemImage(itemId: number, newFile: File): Promise<I
       await deleteImage(oldPath);
     } catch { /* 旧文件可能已不存在 */ }
     const seq = parseSequenceFromFilename(oldPath);
-    const filenames = await saveImageBatch(categoryName, [newFile], [seq]);
+    const prefix = parsePrefixFromFilename(oldPath);
+    const filenames = await saveImageBatch(prefix, [newFile], [seq]);
     newPath = filenames[0];
   } else {
     // 旧的是 base64 或无图片 → 写入 OPFS 新文件
