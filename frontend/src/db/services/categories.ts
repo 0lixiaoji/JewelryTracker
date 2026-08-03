@@ -25,6 +25,39 @@ function rowToItem(row: Record<string, unknown>): Item {
   };
 }
 
+// ── 辅助：从 image_path 提取排序键 ──────────────────────────────
+//
+// image_path 格式: {前缀}_{编号}.{扩展名}
+// - 无 subtype: "发圈_1.jpg"        → prefix="发圈",   num=1
+// - 有 subtype: "耳环_h_3.jpg"      → prefix="耳环_h", num=3
+// - 无法解析:   null / base64       → 排在最后
+//
+// 排序规则: 先按 prefix 字母序，再按 num 数字序
+
+interface SortParts {
+  prefix: string;
+  num: number;
+}
+
+function parseSortParts(imagePath: string | null): SortParts {
+  if (!imagePath) return { prefix: '￿', num: 0 };
+  if (imagePath.startsWith('data:')) return { prefix: '￿', num: 0 };
+
+  // 去掉扩展名，再按最后一个 _ 拆分为 prefix 和 num
+  const dotIdx = imagePath.lastIndexOf('.');
+  const nameWithoutExt = dotIdx > 0 ? imagePath.slice(0, dotIdx) : imagePath;
+
+  const lastUnderscoreIdx = nameWithoutExt.lastIndexOf('_');
+  if (lastUnderscoreIdx < 0) {
+    return { prefix: nameWithoutExt, num: 0 };
+  }
+
+  const prefix = nameWithoutExt.slice(0, lastUnderscoreIdx);
+  const num = parseInt(nameWithoutExt.slice(lastUnderscoreIdx + 1), 10);
+
+  return { prefix, num: isNaN(num) ? Infinity : num };
+}
+
 // ── 查询 ──────────────────────────────────────────────────────────
 
 export function listCategories(): CategoryWithStats[] {
@@ -57,8 +90,7 @@ export function getCategoryItems(categoryId: number): Item[] {
   const stmt = db.prepare(
     `SELECT id, category_id, image_path, usage_count, created_at
      FROM items
-     WHERE category_id = :catId
-     ORDER BY created_at DESC`,
+     WHERE category_id = :catId`,
   );
   stmt.bind({ ':catId': categoryId });
   const rows: Item[] = [];
@@ -66,6 +98,17 @@ export function getCategoryItems(categoryId: number): Item[] {
     rows.push(rowToItem(stmt.getAsObject()));
   }
   stmt.free();
+
+  // 按 prefix 字母序 → num 数字序升序排列，
+  // 无法解析的项（null / base64）排到最后
+  rows.sort((a, b) => {
+    const pa = parseSortParts(a.image_path);
+    const pb = parseSortParts(b.image_path);
+    const prefixCmp = pa.prefix.localeCompare(pb.prefix);
+    if (prefixCmp !== 0) return prefixCmp;
+    return pa.num - pb.num;
+  });
+
   return rows;
 }
 
