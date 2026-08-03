@@ -86,7 +86,7 @@ export default function CategoryDetail() {
     <div>
       {/* 页面头部 */}
       <div className="page-header">
-        <button className="btn-back" onClick={() => navigate('/')}>
+        <button className="btn-back" onClick={() => navigate(-1)}>
           ← 返回
         </button>
         <h2>{category?.name_zh ?? `分类 ${categoryId}`}</h2>

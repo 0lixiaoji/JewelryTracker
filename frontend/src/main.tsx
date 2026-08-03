@@ -1,7 +1,7 @@
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import App from './App';
-import { hideSplashScreen, setStatusBar } from './capacitor';
+import { hideSplashScreen, setStatusBar, setupBackButton } from './capacitor';
 import { autoBackup, initDatabase, setupAutoSave } from './db/database';
 
 // ── 启动时初始化数据库 + 自动保存 ──────────────────────────────
@@ -22,7 +22,9 @@ Promise.all([
   hideSplashScreen();
 });
 
-// ── 渲染 ────────────────────────────────────────────────────────
+// ── 注册 Android 系统返回键/手势监听 ────────────────────────────
+
+setupBackButton();
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>

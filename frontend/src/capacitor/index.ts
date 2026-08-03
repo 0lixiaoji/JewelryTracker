@@ -137,6 +137,37 @@ export async function setStatusBar(style: 'light' | 'dark' = 'dark'): Promise<vo
   }
 }
 
+// ── 返回按钮 ─────────────────────────────────────────────────────
+
+let backButtonRegistered = false;
+
+/**
+ * 注册 Android 系统返回键/手势监听（全局单例，只需调用一次）。
+ *
+ * - Android：系统返回键或边缘手势触发时，优先执行 SPA 路由回退
+ *   （window.history.back()）；若无历史记录则退出 App
+ * - iOS / Web：无效果
+ *
+ * 应在 App 启动后尽早调用（如 main.tsx）。
+ */
+export function setupBackButton(): void {
+  if (!isNative() || getPlatform() !== 'android') return;
+  if (backButtonRegistered) return;
+  backButtonRegistered = true;
+
+  import('@capacitor/app').then(({ App }) => {
+    App.addListener('backButton', ({ canGoBack }) => {
+      if (canGoBack) {
+        // WebView 有历史记录 → SPA 路由回退
+        window.history.back();
+      } else {
+        // 无历史记录 → 退出 App
+        App.exitApp?.();
+      }
+    });
+  });
+}
+
 // ── 启动页 ───────────────────────────────────────────────────────
 
 /**

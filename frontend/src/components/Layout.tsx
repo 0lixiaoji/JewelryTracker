@@ -1,4 +1,5 @@
 import { NavLink, Outlet } from 'react-router-dom';
+import { useSwipeBack } from '../hooks/useSwipeBack';
 
 const NAV_ITEMS = [
   { to: '/', label: '仪表盘', end: true },
@@ -8,8 +9,20 @@ const NAV_ITEMS = [
 ];
 
 export default function Layout() {
+  const { swipeProgress } = useSwipeBack();
+
   return (
     <div className="app-shell">
+      {/* 左滑返回指示器 */}
+      {swipeProgress > 0 && (
+        <div
+          className="swipe-indicator"
+          style={{ opacity: swipeProgress, transform: `translateX(${(swipeProgress - 1) * 40}px)` }}
+        >
+          ←
+        </div>
+      )}
+
       <header className="app-header">
         <h1>JewelryTracker</h1>
         <nav>

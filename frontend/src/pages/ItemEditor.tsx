@@ -149,7 +149,7 @@ export default function ItemEditor() {
   return (
     <div>
       <div className="page-header">
-        <button className="btn-back" onClick={() => navigate('/')}>
+        <button className="btn-back" onClick={() => navigate(-1)}>
           ← 返回
         </button>
         <h2>录入首饰</h2>
