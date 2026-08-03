@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { getImageBlobUrl, isBase64 } from '../db/services/imageStore';
+import { getDisplayName, getImageBlobUrl, isBase64 } from '../db/services/imageStore';
 import FullscreenViewer from './FullscreenViewer';
 
 interface CellRect {
@@ -65,7 +65,7 @@ export default function CompositeImage({
     async function generate() {
       try {
         // 加载图片 + 对应 ID（失败则跳过）
-        const entries: { img: HTMLImageElement; id: number }[] = [];
+        const entries: { img: HTMLImageElement; id: number; imagePath: string }[] = [];
         for (let i = 0; i < imagePaths.length; i++) {
           if (cancelled) return;
           const path = imagePaths[i];
@@ -81,6 +81,7 @@ export default function CompositeImage({
             entries.push({
               img: await loadImage(src),
               id: itemIds?.[i] ?? i,
+              imagePath: path,
             });
           } catch { /* skip */ }
         }
@@ -115,7 +116,7 @@ export default function CompositeImage({
           const w = CELL_SIZE - GAP * 2;
           const h = CELL_SIZE - GAP * 2;
 
-          const { img, id } = entries[i];
+          const { img, id, imagePath } = entries[i];
 
           // 记录格子坐标
           cellsRef.current.push({ id, x, y, w, h });
@@ -128,12 +129,27 @@ export default function CompositeImage({
           ctx.fillRect(x, y, w, h);
           ctx.drawImage(img, x + (w - dw) / 2, y + (h - dh) / 2, dw, dh);
 
-          // 已佩戴标记：灰色蒙层 + 底部文字条
-          if (wornSet.has(id)) {
-            // 整格灰色覆盖，降低亮度区分已佩戴
+          const isWorn = wornSet.has(id);
+          const displayName = getDisplayName(imagePath);
+
+          if (isWorn) {
+            // 已佩戴：灰色蒙层
             ctx.fillStyle = 'rgba(160, 160, 160, 0.6)';
             ctx.fillRect(x, y, w, h);
-            // 底部红色条 + 文字
+
+            // 名称条 → 顶部
+            if (displayName) {
+              const nameBarH = Math.max(18, h * 0.14);
+              ctx.fillStyle = 'rgba(0, 0, 0, 0.45)';
+              ctx.fillRect(x, y, w, nameBarH);
+              ctx.fillStyle = '#fff';
+              ctx.font = `${Math.max(11, nameBarH * 0.55)}px sans-serif`;
+              ctx.textAlign = 'center';
+              ctx.textBaseline = 'middle';
+              ctx.fillText(displayName, x + w / 2, y + nameBarH / 2);
+            }
+
+            // 已佩戴红色条 → 底部
             const barH = Math.max(20, h * 0.18);
             ctx.fillStyle = 'rgba(211, 47, 47, 0.78)';
             ctx.fillRect(x, y + h - barH, w, barH);
@@ -142,6 +158,18 @@ export default function CompositeImage({
             ctx.textAlign = 'center';
             ctx.textBaseline = 'middle';
             ctx.fillText('已佩戴', x + w / 2, y + h - barH / 2);
+          } else {
+            // 未佩戴：名称条 → 底部
+            if (displayName) {
+              const nameBarH = Math.max(18, h * 0.14);
+              ctx.fillStyle = 'rgba(0, 0, 0, 0.45)';
+              ctx.fillRect(x, y + h - nameBarH, w, nameBarH);
+              ctx.fillStyle = '#fff';
+              ctx.font = `${Math.max(11, nameBarH * 0.55)}px sans-serif`;
+              ctx.textAlign = 'center';
+              ctx.textBaseline = 'middle';
+              ctx.fillText(displayName, x + w / 2, y + h - nameBarH / 2);
+            }
           }
         }
 

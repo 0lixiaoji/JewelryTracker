@@ -87,13 +87,15 @@ export default function History() {
                     <span
                       style={{
                         position: 'absolute',
-                        bottom: 2,
-                        left: 2,
-                        background: 'rgba(0,0,0,.6)',
+                        bottom: 0,
+                        left: 0,
+                        right: 0,
+                        background: 'rgba(0, 0, 0, 0.45)',
                         color: '#fff',
                         fontSize: '0.6rem',
-                        padding: '1px 4px',
-                        borderRadius: 3,
+                        padding: '2px 0',
+                        textAlign: 'center',
+                        lineHeight: 1.2,
                       }}
                     >
                       {getDisplayName(item.image_path) ?? getCategoryName(item.category_id)}
