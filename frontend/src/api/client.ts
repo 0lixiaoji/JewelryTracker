@@ -19,7 +19,7 @@ import { createDailyWear as dbCreateDailyWear, updateDailyWear as dbUpdateDailyW
 import { normalizeCategory as dbNormalizeCategory } from '../db/services/normalization';
 import { listHistory as dbListHistory } from '../db/services/history';
 import { initDatabase, getDBSync } from '../db/database';
-import { getCategoryNextSequence, saveImageBatch, isBase64, deleteImage } from '../db/services/imageStore';
+import { getCategoryNextSequence, checkSequenceConflicts, saveImageBatch, isBase64, deleteImage } from '../db/services/imageStore';
 
 // ── 初始化标记 ────────────────────────────────────────────────────
 
@@ -77,7 +77,7 @@ export async function fetchCategoryItems(categoryId: number): Promise<Item[]> {
 
 // ── 首饰 CRUD ────────────────────────────────────────────────────
 
-export async function createItem(formData: FormData, subtypeName?: string): Promise<Item> {
+export async function createItem(formData: FormData, subtypeName?: string, startSequence?: number): Promise<Item> {
   await ensureInit();
 
   const categoryId = Number(formData.get('category_id'));
@@ -99,8 +99,17 @@ export async function createItem(formData: FormData, subtypeName?: string): Prom
   // 获取分类名称（若有细分类型则使用细分名作为文件前缀）
   const categoryName = subtypeName || lookupCategoryName(categoryId);
 
-  // 获取下一个编号
-  const sequences = await getCategoryNextSequence(categoryName, 1);
+  // 获取编号：自定义起始编号 或 自动分配
+  let sequences: number[];
+  if (startSequence !== undefined) {
+    sequences = [startSequence];
+    const conflicts = await checkSequenceConflicts(categoryName, sequences);
+    if (conflicts.length > 0) {
+      throw new Error(`编号 ${conflicts.join(', ')} 已被占用，请换一个编号`);
+    }
+  } else {
+    sequences = await getCategoryNextSequence(categoryName, 1);
+  }
 
   try {
     // 优先写入 OPFS 文件存储
@@ -114,7 +123,7 @@ export async function createItem(formData: FormData, subtypeName?: string): Prom
   }
 }
 
-export async function createItemsBatch(categoryId: number, files: File[], subtypeName?: string): Promise<Item[]> {
+export async function createItemsBatch(categoryId: number, files: File[], subtypeName?: string, startSequence?: number): Promise<Item[]> {
   await ensureInit();
 
   if (!categoryId || isNaN(categoryId)) {
@@ -136,8 +145,17 @@ export async function createItemsBatch(categoryId: number, files: File[], subtyp
   // 获取分类名称（若有细分类型则使用细分名作为文件前缀）
   const categoryName = subtypeName || lookupCategoryName(categoryId);
 
-  // 获取下一组编号
-  const sequences = await getCategoryNextSequence(categoryName, files.length);
+  // 获取编号：自定义起始编号 或 自动分配
+  let sequences: number[];
+  if (startSequence !== undefined) {
+    sequences = Array.from({ length: files.length }, (_, i) => startSequence + i);
+    const conflicts = await checkSequenceConflicts(categoryName, sequences);
+    if (conflicts.length > 0) {
+      throw new Error(`编号 ${conflicts.join(', ')} 已被占用，请换一个起始编号`);
+    }
+  } else {
+    sequences = await getCategoryNextSequence(categoryName, files.length);
+  }
 
   try {
     // 优先写入 OPFS 文件存储

@@ -31,6 +31,7 @@ export default function ItemEditor() {
   const [batchEntries, setBatchEntries] = useState<BatchEntry[]>([]);
   const [submitting, setSubmitting] = useState(false);
   const [dragOver, setDragOver] = useState(false);
+  const [customStartSeq, setCustomStartSeq] = useState('');
 
   // ── 清理 object URL ────────────────────────────────────────
   useEffect(() => {
@@ -103,7 +104,13 @@ export default function ItemEditor() {
     setSubmitting(true);
     try {
       const files = batchEntries.map((e) => e.file);
-      await createItemsBatch(categoryId as number, files, subtypeName || undefined);
+      const seqNum = customStartSeq ? parseInt(customStartSeq, 10) : undefined;
+      if (seqNum !== undefined && (isNaN(seqNum) || seqNum < 1)) {
+        notify('自定义起始编号必须是正整数', 'error');
+        setSubmitting(false);
+        return;
+      }
+      await createItemsBatch(categoryId as number, files, subtypeName || undefined, seqNum);
       notify(`已录入 ${files.length} 件首饰`, 'success');
       navigate(`/categories/${categoryId}`);
     } catch (err) {
@@ -269,6 +276,23 @@ export default function ItemEditor() {
             </select>
           </label>
         )}
+
+        {/* ── 自定义起始编号（可选） ── */}
+        <label style={{ fontWeight: 600 }}>
+          自定义起始编号
+          <span style={{ fontWeight: 400, color: '#999', fontSize: '0.8rem', marginLeft: 8 }}>
+            （可选，留空自动分配）
+          </span>
+          <input
+            type="number"
+            min="1"
+            step="1"
+            value={customStartSeq}
+            onChange={(e) => setCustomStartSeq(e.target.value)}
+            placeholder="自动分配"
+            style={{ marginTop: 6 }}
+          />
+        </label>
 
         {/* ── 提交 ── */}
         <button type="submit" disabled={!canSubmit || submitting}>

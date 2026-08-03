@@ -62,6 +62,43 @@ function extFromMime(mime: string): string {
   return map[mime] ?? 'jpg';
 }
 
+// ── 冲突检测 ──────────────────────────────────────────────────────
+
+/**
+ * 检查指定编号序列是否与 OPFS /images/ 中已有文件冲突
+ * @returns 冲突的编号数组（为空表示全部可用）
+ */
+export async function checkSequenceConflicts(
+  categoryName: string,
+  sequences: number[],
+): Promise<number[]> {
+  const conflicts: number[] = [];
+  try {
+    const root = await navigator.storage.getDirectory();
+    let imagesDir: FileSystemDirectoryHandle;
+    try {
+      imagesDir = await root.getDirectoryHandle(IMAGES_DIR);
+    } catch {
+      return []; // 目录不存在，不可能冲突
+    }
+
+    const prefix = `${categoryName}_`;
+    const seqSet = new Set(sequences);
+
+    for await (const [name] of (imagesDir as unknown as AsyncIterable<[string, unknown]>)) {
+      if (typeof name === 'string' && name.startsWith(prefix)) {
+        const rest = name.slice(prefix.length);
+        const numStr = rest.split('.')[0];
+        const n = parseInt(numStr, 10);
+        if (seqSet.has(n)) conflicts.push(n);
+      }
+    }
+  } catch (err) {
+    console.warn('checkSequenceConflicts failed:', err);
+  }
+  return conflicts;
+}
+
 // ── 编号 ──────────────────────────────────────────────────────────
 
 /**
