@@ -43,7 +43,9 @@ export function listHistory(page: number = 1, pageSize: number = 20): HistoryPag
       `SELECT i.id, i.category_id, i.image_path, i.usage_count, i.created_at
        FROM wear_record_items wri
        JOIN items i ON i.id = wri.item_id
-       WHERE wri.wear_record_id = :rid`,
+       JOIN categories c ON c.id = i.category_id
+       WHERE wri.wear_record_id = :rid
+       ORDER BY c.sort_order`,
     );
     s.bind({ ':rid': rid });
     const items: Item[] = [];
