@@ -1,6 +1,14 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { getImageBlobUrl, isBase64 } from '../db/services/imageStore';
 import FullscreenViewer from './FullscreenViewer';
+
+interface CellRect {
+  id: number;
+  x: number; // canvas 坐标系
+  y: number;
+  w: number;
+  h: number;
+}
 
 interface Props {
   imagePaths: string[];
@@ -9,25 +17,50 @@ interface Props {
   itemIds?: number[];
   /** 本轮已佩戴的首饰 ID 列表 */
   wornItemIds?: number[];
+  /** 当前选中的 item ID（null = 不戴） */
+  selectedItemId?: number | null;
+  /** 格子点击回调 */
+  onCellClick?: (itemId: number) => void;
 }
 
 /**
- * 组合图组件 — 缩略图 + 点击全屏查看
+ * 组合图组件 — 可点击格子选中 + 全屏查看
  *
- * 缩略图：适配容器宽度，显示 "点击放大" 提示，已佩戴格子叠加红色标记。
- * 全屏：打开 FullscreenViewer，双指缩放 + 拖拽 + 双击切换。
+ * 单击格子 = 选中/取消首饰
+ * 双击 = 打开全屏查看（双指缩放 + 拖拽）
+ * 已佩戴格子叠加灰色蒙层 + 红色标记
+ * 选中格子叠加蓝色边框覆盖层（CSS，无需重绘 canvas）
  */
-export default function CompositeImage({ imagePaths, categoryName, itemIds, wornItemIds }: Props) {
+export default function CompositeImage({
+  imagePaths,
+  categoryName,
+  itemIds,
+  wornItemIds,
+  selectedItemId,
+  onCellClick,
+}: Props) {
   const wornSet = new Set(wornItemIds ?? []);
   const [dataUrl, setDataUrl] = useState<string | null>(null);
   const [error, setError] = useState(false);
   const [imageSize, setImageSize] = useState({ w: 0, h: 0 });
   const [fullscreen, setFullscreen] = useState(false);
 
+  // 格子坐标（canvas 坐标系），点击命中 + 覆盖层定位用
+  const cellsRef = useRef<CellRect[]>([]);
+  const colsRef = useRef(0);
+  const imgRef = useRef<HTMLImageElement | null>(null);
+
+  // 选中覆盖层样式（相对于 composite-thumb 容器）
+  const [overlayStyle, setOverlayStyle] = useState<React.CSSProperties | null>(null);
+
+  const CELL_SIZE = 280;
+  const GAP = 4;
+
   useEffect(() => {
     if (imagePaths.length === 0) { setError(true); return; }
 
     let cancelled = false;
+    let revokeUrl: string | null = null;
 
     async function generate() {
       try {
@@ -56,11 +89,13 @@ export default function CompositeImage({ imagePaths, categoryName, itemIds, worn
         if (entries.length === 0) { setError(true); return; }
 
         const count = entries.length;
-        const cellSize = 280;
         const cols = Math.ceil(Math.sqrt(count));
         const rows = Math.ceil(count / cols);
-        const cw = cols * cellSize;
-        const ch = rows * cellSize;
+        const cw = cols * CELL_SIZE;
+        const ch = rows * CELL_SIZE;
+
+        colsRef.current = cols;
+        cellsRef.current = []; // 重建
 
         const canvas = document.createElement('canvas');
         canvas.width = cw;
@@ -71,17 +106,20 @@ export default function CompositeImage({ imagePaths, categoryName, itemIds, worn
         ctx.fillStyle = '#fafafa';
         ctx.fillRect(0, 0, cw, ch);
 
-        const gap = 4;
         for (let i = 0; i < entries.length; i++) {
           if (cancelled) return;
           const col = i % cols;
           const row = Math.floor(i / cols);
-          const x = col * cellSize + gap;
-          const y = row * cellSize + gap;
-          const w = cellSize - gap * 2;
-          const h = cellSize - gap * 2;
+          const x = col * CELL_SIZE + GAP;
+          const y = row * CELL_SIZE + GAP;
+          const w = CELL_SIZE - GAP * 2;
+          const h = CELL_SIZE - GAP * 2;
 
           const { img, id } = entries[i];
+
+          // 记录格子坐标
+          cellsRef.current.push({ id, x, y, w, h });
+
           const scale = Math.min(w / img.naturalWidth, h / img.naturalHeight);
           const dw = img.naturalWidth * scale;
           const dh = img.naturalHeight * scale;
@@ -90,13 +128,15 @@ export default function CompositeImage({ imagePaths, categoryName, itemIds, worn
           ctx.fillRect(x, y, w, h);
           ctx.drawImage(img, x + (w - dw) / 2, y + (h - dh) / 2, dw, dh);
 
-          // 已佩戴标记：红色半透明遮罩 + 文字
+          // 已佩戴标记：灰色蒙层 + 底部文字条
           if (wornSet.has(id)) {
-            // 底部红色条
+            // 整格灰色覆盖，降低亮度区分已佩戴
+            ctx.fillStyle = 'rgba(160, 160, 160, 0.6)';
+            ctx.fillRect(x, y, w, h);
+            // 底部红色条 + 文字
             const barH = Math.max(20, h * 0.18);
             ctx.fillStyle = 'rgba(211, 47, 47, 0.78)';
             ctx.fillRect(x, y + h - barH, w, barH);
-            // 文字
             ctx.fillStyle = '#fff';
             ctx.font = `bold ${Math.max(12, barH * 0.6)}px sans-serif`;
             ctx.textAlign = 'center';
@@ -105,10 +145,27 @@ export default function CompositeImage({ imagePaths, categoryName, itemIds, worn
           }
         }
 
-        const url = canvas.toDataURL('image/jpeg', 0.85);
-        if (!cancelled) {
+        // 优先 toBlob（轻量），失败则回退 toDataURL
+        let url: string | null = null;
+        const blob = await new Promise<Blob | null>((resolve) =>
+          canvas.toBlob((b) => resolve(b), 'image/jpeg', 0.85),
+        );
+        if (blob) {
+          url = URL.createObjectURL(blob);
+        } else {
+          // toBlob 回调返回 null（部分旧 WebView）→ 回退
+          try {
+            const dataUrl = canvas.toDataURL('image/jpeg', 0.85);
+            if (dataUrl && dataUrl.length > 100) url = dataUrl;
+          } catch { /* ignore */ }
+        }
+
+        if (!cancelled && url) {
+          revokeUrl = url.startsWith('blob:') ? url : null;
           setDataUrl(url);
           setImageSize({ w: cw, h: ch });
+        } else if (!cancelled) {
+          setError(true);
         }
       } catch {
         if (!cancelled) setError(true);
@@ -116,8 +173,93 @@ export default function CompositeImage({ imagePaths, categoryName, itemIds, worn
     }
 
     generate();
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+      if (revokeUrl) URL.revokeObjectURL(revokeUrl);
+    };
   }, [imagePaths, itemIds, wornItemIds]);
+
+  // 选中变化 → 更新 CSS 覆盖层位置（不重绘 canvas）
+  const updateOverlay = useCallback(() => {
+    if (selectedItemId == null || cellsRef.current.length === 0 || !imgRef.current) {
+      setOverlayStyle(null);
+      return;
+    }
+    if (imageSize.w === 0 || imageSize.h === 0) { setOverlayStyle(null); return; }
+
+    const cell = cellsRef.current.find((c) => c.id === selectedItemId);
+    if (!cell) { setOverlayStyle(null); return; }
+
+    const img = imgRef.current;
+    const scaleX = img.clientWidth / imageSize.w;
+    const scaleY = img.clientHeight / imageSize.h;
+
+    setOverlayStyle({
+      left: cell.x * scaleX,
+      top: cell.y * scaleY,
+      width: cell.w * scaleX,
+      height: cell.h * scaleY,
+    });
+  }, [selectedItemId, imageSize]);
+
+  // selectedItemId / imageSize / 窗口大小变化 → 更新覆盖层
+  useEffect(() => {
+    updateOverlay();
+  }, [updateOverlay]);
+
+  // 监听窗口 resize 更新覆盖层
+  useEffect(() => {
+    window.addEventListener('resize', updateOverlay);
+    return () => window.removeEventListener('resize', updateOverlay);
+  }, [updateOverlay]);
+
+  // 图片 onLoad 后更新覆盖层
+  const handleImgLoad = useCallback(() => {
+    updateOverlay();
+  }, [updateOverlay]);
+
+  // 点击格子 → 选中/取消
+  const clickTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const handleClick = useCallback(
+    (e: React.MouseEvent<HTMLDivElement>) => {
+      // 双击判断：延迟执行单击，如果短时间内有双击则取消
+      if (clickTimerRef.current) {
+        clearTimeout(clickTimerRef.current);
+        clickTimerRef.current = null;
+        return; // 由 handleDoubleClick 处理
+      }
+
+      clickTimerRef.current = setTimeout(() => {
+        clickTimerRef.current = null;
+        if (!imgRef.current || cellsRef.current.length === 0) return;
+
+        const rect = imgRef.current.getBoundingClientRect();
+        const scaleX = rect.width / imageSize.w;
+        const scaleY = rect.height / imageSize.h;
+        const canvasX = (e.clientX - rect.left) / scaleX;
+        const canvasY = (e.clientY - rect.top) / scaleY;
+
+        const col = Math.floor(canvasX / CELL_SIZE);
+        const row = Math.floor(canvasY / CELL_SIZE);
+        const cells = cellsRef.current;
+        const idx = row * colsRef.current + col;
+
+        if (idx >= 0 && idx < cells.length) {
+          onCellClick?.(cells[idx].id);
+        }
+      }, 280);
+    },
+    [onCellClick, imageSize],
+  );
+
+  const handleDoubleClick = useCallback(() => {
+    if (clickTimerRef.current) {
+      clearTimeout(clickTimerRef.current);
+      clickTimerRef.current = null;
+    }
+    setFullscreen(true);
+  }, []);
 
   if (error) {
     return (
@@ -131,17 +273,24 @@ export default function CompositeImage({ imagePaths, categoryName, itemIds, worn
 
   return (
     <>
-      <div className="composite-thumb" onClick={() => setFullscreen(true)}>
+      <div
+        className="composite-thumb"
+        onClick={onCellClick ? handleClick : () => setFullscreen(true)}
+        onDoubleClick={onCellClick ? handleDoubleClick : undefined}
+      >
         <img
+          ref={imgRef}
           src={dataUrl}
           alt={`${categoryName}组合图`}
-          onError={(e) => {
-            // data URL 加载失败时降级显示文字
-            (e.target as HTMLImageElement).style.display = 'none';
-            setError(true);
-          }}
+          onLoad={handleImgLoad}
+          onError={() => setError(true)}
         />
-        <span className="composite-hint">点击放大</span>
+        {overlayStyle && (
+          <div className="composite-cell-overlay" style={overlayStyle} />
+        )}
+        <span className="composite-hint">
+          {onCellClick ? '单击选择 · 双击放大' : '点击放大'}
+        </span>
       </div>
 
       <FullscreenViewer

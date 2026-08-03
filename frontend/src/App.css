@@ -193,8 +193,10 @@ button:disabled { background: #aaa; cursor: not-allowed; }
   overflow: hidden;
   padding: 4px;
   display: flex;
+  flex-direction: column;
   align-items: center;
-  gap: 4px;
+  gap: 2px;
+  position: relative;
 }
 
 .picker-item.selected {
@@ -203,7 +205,9 @@ button:disabled { background: #aaa; cursor: not-allowed; }
 }
 
 .picker-item input {
-  margin: 0 4px;
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
 }
 
 .picker-item img {
@@ -215,8 +219,12 @@ button:disabled { background: #aaa; cursor: not-allowed; }
 }
 
 .picker-item.none {
-  font-size: 0.85rem;
+  font-size: 0.8rem;
   color: #999;
+  padding: 6px 10px;
+  justify-content: center;
+  min-height: 80px;
+  box-sizing: border-box;
 }
 
 /* ── History ──────────────────────────────────────────── */
@@ -516,12 +524,9 @@ button:disabled { background: #aaa; cursor: not-allowed; }
 }
 
 .picker-item.worn {
-  opacity: 0.55;
+  opacity: 0.4;
 }
 
-.picker-item.worn.selected {
-  opacity: 1;
-}
 
 /* ── Composite Thumbnail ──────────────────────────────── */
 .composite-thumb {
@@ -533,7 +538,7 @@ button:disabled { background: #aaa; cursor: not-allowed; }
   cursor: pointer;
   background: #fafafa;
   display: block;
-  max-width: 200px;
+  width: 100%;
   min-height: 60px;
   border: 1px solid #eee;
 }
@@ -557,7 +562,7 @@ button:disabled { background: #aaa; cursor: not-allowed; }
 }
 
 .composite-fallback {
-  max-width: 200px;
+  width: 100%;
   height: 100px;
   background: #e0e0e0;
   display: flex;
@@ -570,7 +575,7 @@ button:disabled { background: #aaa; cursor: not-allowed; }
 }
 
 .composite-loading {
-  max-width: 200px;
+  width: 100%;
   height: 100px;
   background: #f0f0f0;
   background-image: linear-gradient(90deg, #f0f0f0 0%, #e0e0e0 40%, #f0f0f0 80%);
@@ -578,6 +583,35 @@ button:disabled { background: #aaa; cursor: not-allowed; }
   animation: img-loading-shimmer 1.2s ease-in-out infinite;
   border-radius: 8px;
   margin-bottom: 12px;
+}
+
+/* ── Composite Cell Overlay ─────────────────────────── */
+.composite-cell-overlay {
+  position: absolute;
+  border: 3px solid #1a73e8;
+  border-radius: 4px;
+  background: rgba(26, 115, 232, 0.1);
+  pointer-events: none;
+  z-index: 1;
+  box-shadow: 0 0 0 2px rgba(26, 115, 232, 0.25);
+}
+
+/* ── Clear Selection Button ─────────────────────────── */
+.btn-clear-selection {
+  display: inline-block;
+  background: transparent;
+  color: #999;
+  font-size: 0.75rem;
+  padding: 2px 10px;
+  border: 1px solid #ddd;
+  border-radius: 10px;
+  cursor: pointer;
+  margin-bottom: 8px;
+}
+.btn-clear-selection:hover {
+  color: #d32f2f;
+  border-color: #d32f2f;
+  background: #fff5f5;
 }
 
 /* ── Fullscreen Viewer ────────────────────────────────── */

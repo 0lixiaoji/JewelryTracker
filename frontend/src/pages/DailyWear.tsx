@@ -3,9 +3,7 @@ import { createDailyWear, updateDailyWear, fetchCategoryItems, fetchHistory, fet
 import { useCategories } from '../contexts/CategoryContext';
 import { useNotification } from '../contexts/NotificationContext';
 import CompositeImage from '../components/CompositeImage';
-import ImageWithFallback from '../components/ImageWithFallback';
 import LoadingSpinner from '../components/LoadingSpinner';
-import { getDisplayName } from '../db/services/imageStore';
 import type { Item, WearRecord } from '../api/types';
 
 /** 格式化今天日期 YYYY-MM-DD */
@@ -135,7 +133,6 @@ export default function DailyWear() {
 
       {categories.map((cat) => {
           const catItems = itemsMap[cat.id] ?? [];
-          const catWornSet = wornItemIds[cat.id];
 
           return (
             <div key={cat.id} className="wear-category">
@@ -146,7 +143,7 @@ export default function DailyWear() {
                 </span>
               </h3>
 
-              {/* 组合图：缩略图 + 点击全屏放大，已佩戴格子标红 */}
+              {/* 组合图：单击格子选中/取消，双击全屏放大 */}
               {catItems.length > 0 && (() => {
                 const pairs = catItems
                   .filter((it) => it.image_path !== null)
@@ -156,6 +153,8 @@ export default function DailyWear() {
                     imagePaths={pairs.map((p) => p.path)}
                     itemIds={pairs.map((p) => p.id)}
                     wornItemIds={wornItemIds[cat.id]}
+                    selectedItemId={selections[cat.id] ?? null}
+                    onCellClick={(itemId) => toggleItem(cat.id, itemId)}
                     categoryName={cat.name_zh}
                   />
                 );
@@ -166,62 +165,16 @@ export default function DailyWear() {
                   该分类暂无首饰
                 </p>
               ) : (
-                <div className="item-picker">
-                  {/* 不选 */}
-                  <label
-                    className={`picker-item none ${!selections[cat.id] ? 'selected' : ''}`}
+                selections[cat.id] != null && (
+                  <button
+                    className="btn-clear-selection"
+                    onClick={() =>
+                      setSelections((prev) => ({ ...prev, [cat.id]: null }))
+                    }
                   >
-                    <input
-                      type="radio"
-                      name={`cat-${cat.id}`}
-                      checked={!selections[cat.id]}
-                      onChange={() =>
-                        setSelections((prev) => ({ ...prev, [cat.id]: null }))
-                      }
-                    />
-                    不戴
-                  </label>
-
-                  {/* 首饰选项 */}
-                  {catItems.map((item) => {
-                    const isWorn = (catWornSet ?? []).includes(item.id);
-                    return (
-                      <label
-                        key={item.id}
-                        className={`picker-item ${
-                          selections[cat.id] === item.id ? 'selected' : ''
-                        } ${isWorn ? 'worn' : ''}`}
-                      >
-                        <input
-                          type="radio"
-                          name={`cat-${cat.id}`}
-                          checked={selections[cat.id] === item.id}
-                          onChange={() => toggleItem(cat.id, item.id)}
-                        />
-                        <div className="picker-img-wrapper">
-                          {item.image_path ? (
-                            <ImageWithFallback src={item.image_path} alt="" />
-                          ) : (
-                            <div
-                              className="img-fallback"
-                              style={{ width: 80, height: 80 }}
-                            >
-                              🖼️
-                            </div>
-                          )}
-                          {isWorn && (
-                            <span className="worn-badge">已佩戴</span>
-                          )}
-                        </div>
-                        {getDisplayName(item.image_path) && (
-                          <span style={{ fontSize: '0.7rem', color: '#666', marginTop: 2, display: 'block', textAlign: 'center' }}>
-                            {getDisplayName(item.image_path)}
-                          </span>
-                        )}
-                      </label>
-                    );
-                  })}
-                </div>
+                    清除选择
+                  </button>
+                )
               )}
             </div>
           );
