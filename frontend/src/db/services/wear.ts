@@ -14,6 +14,10 @@
  * 4. 删除旧 wear_record_items
  * 5. 写入新 wear_record_items
  * 6. 增加新首饰 usage_count
+ *
+ * getWornItemsSinceLastNormalization:
+ * 查询每个分类中自上次归一化以来被佩戴过的首饰 ID 集合，
+ * 用于 DailyWear 页面展示「已佩戴」标记，帮助用户轮换选择。
  */
 
 import type { DailyWearCreate, WearRecord } from '../../api/types';
@@ -162,4 +166,77 @@ export function updateDailyWear(recordId: number, body: DailyWearCreate): WearRe
   markDirty();
 
   return queryWearRecord(db, recordId, body.items.map((i) => i.item_id));
+}
+
+/**
+ * 查询每个分类中自上次归一化以来被佩戴过的首饰 ID 列表
+ *
+ * 返回 Record<categoryId, number[]>
+ * - 若分类从未归一化，则统计所有历史佩戴记录
+ * - 若分类已归一化，则只统计归一化之后的佩戴记录
+ * - 使用 wear_records.created_at（含时间）而非 worn_at（仅日期）做比较
+ */
+export function getWornItemsSinceLastNormalization(): Record<number, number[]> {
+  const db = getDBSync();
+
+  // 1. 获取所有分类的最后归一化时间（datetime 格式）
+  const lastNormMap = new Map<number, string>();
+  const normStmt = db.prepare(
+    'SELECT category_id, MAX(created_at) AS last_norm FROM normalizations GROUP BY category_id',
+  );
+  while (normStmt.step()) {
+    const row = normStmt.getAsObject();
+    lastNormMap.set(row.category_id as number, row.last_norm as string);
+  }
+  normStmt.free();
+
+  // 2. 获取所有分类 ID
+  const catResult = db.exec('SELECT id FROM categories');
+  const categoryIds: number[] = [];
+  if (catResult.length && catResult[0].values.length) {
+    for (const row of catResult[0].values) {
+      categoryIds.push(row[0] as number);
+    }
+  }
+
+  // 3. 对每个分类查询已佩戴的首饰 ID
+  const result: Record<number, number[]> = {};
+
+  for (const catId of categoryIds) {
+    const lastNorm = lastNormMap.get(catId);
+    const wornIds: number[] = [];
+
+    if (lastNorm) {
+      // 只查归一化之后的佩戴记录（用 created_at 比较，含时分秒）
+      const stmt = db.prepare(`
+        SELECT DISTINCT wri.item_id
+        FROM wear_record_items wri
+        JOIN wear_records wr ON wri.wear_record_id = wr.id
+        JOIN items i ON wri.item_id = i.id
+        WHERE i.category_id = :catId AND wr.created_at > :lastNorm
+      `);
+      stmt.bind({ ':catId': catId, ':lastNorm': lastNorm });
+      while (stmt.step()) {
+        wornIds.push(stmt.getAsObject().item_id as number);
+      }
+      stmt.free();
+    } else {
+      // 从未归一化，查所有历史记录
+      const stmt = db.prepare(`
+        SELECT DISTINCT wri.item_id
+        FROM wear_record_items wri
+        JOIN items i ON wri.item_id = i.id
+        WHERE i.category_id = :catId
+      `);
+      stmt.bind({ ':catId': catId });
+      while (stmt.step()) {
+        wornIds.push(stmt.getAsObject().item_id as number);
+      }
+      stmt.free();
+    }
+
+    result[catId] = wornIds;
+  }
+
+  return result;
 }

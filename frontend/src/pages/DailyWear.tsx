@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useState } from 'react';
-import { createDailyWear, updateDailyWear, fetchCategoryItems, fetchHistory } from '../api/client';
+import { createDailyWear, updateDailyWear, fetchCategoryItems, fetchHistory, fetchWornItemIds } from '../api/client';
 import { useCategories } from '../contexts/CategoryContext';
 import { useNotification } from '../contexts/NotificationContext';
+import CompositeImage from '../components/CompositeImage';
 import ImageWithFallback from '../components/ImageWithFallback';
 import LoadingSpinner from '../components/LoadingSpinner';
 import { getDisplayName } from '../db/services/imageStore';
@@ -22,6 +23,7 @@ export default function DailyWear() {
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [todayRecord, setTodayRecord] = useState<WearRecord | null>(null);
+  const [wornItemIds, setWornItemIds] = useState<Record<number, number[]>>({});
 
   const today = todayStr();
 
@@ -29,8 +31,8 @@ export default function DailyWear() {
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      // 并行加载分类首饰和今日历史
-      const [itemsResults, history] = await Promise.all([
+      // 并行加载分类首饰、今日历史和已佩戴标记
+      const [itemsResults, history, wornIds] = await Promise.all([
         Promise.all(
           categories.map(async (cat) => {
             try {
@@ -41,6 +43,7 @@ export default function DailyWear() {
           }),
         ),
         fetchHistory(1, 1).catch(() => ({ items: [], total: 0, page: 1, page_size: 1 })),
+        fetchWornItemIds().catch(() => ({})),
       ]);
 
       const map: Record<number, Item[]> = {};
@@ -48,6 +51,7 @@ export default function DailyWear() {
         map[r.catId] = r.items;
       }
       setItemsMap(map);
+      setWornItemIds(wornIds);
 
       // 检查今天是否已有记录
       const todayRec = history.items.find((r) => r.worn_at === today) ?? null;
@@ -95,16 +99,16 @@ export default function DailyWear() {
     setSubmitting(true);
     try {
       if (todayRecord) {
-        // 修改今日记录
         const rec = await updateDailyWear(todayRecord.id, { items });
         setTodayRecord(rec);
         notify('今日佩戴已更新', 'success');
       } else {
-        // 新建今日记录
         const rec = await createDailyWear({ items });
         setTodayRecord(rec);
         notify('今日佩戴已记录', 'success');
       }
+      // 刷新已佩戴标记
+      fetchWornItemIds().then(setWornItemIds).catch(() => {});
     } catch (e) {
       notify(e instanceof Error ? e.message : '操作失败', 'error');
     } finally {
@@ -129,71 +133,99 @@ export default function DailyWear() {
         </p>
       )}
 
-      {categories.map((cat) => (
-        <div key={cat.id} className="wear-category">
-          <h3>
-            {cat.name_zh}
-            <span style={{ fontSize: '0.8rem', color: '#999', marginLeft: 8 }}>
-              {selections[cat.id] ? '已选 1 件' : '未选'}
-            </span>
-          </h3>
+      {categories.map((cat) => {
+          const catItems = itemsMap[cat.id] ?? [];
+          const catWornSet = wornItemIds[cat.id];
 
-          {itemsMap[cat.id]?.length === 0 ? (
-            <p style={{ color: '#ccc', fontSize: '0.85rem', padding: '8px 0' }}>
-              该分类暂无首饰
-            </p>
-          ) : (
-            <div className="item-picker">
-              {/* 不选 */}
-              <label
-                className={`picker-item none ${!selections[cat.id] ? 'selected' : ''}`}
-              >
-                <input
-                  type="radio"
-                  name={`cat-${cat.id}`}
-                  checked={!selections[cat.id]}
-                  onChange={() =>
-                    setSelections((prev) => ({ ...prev, [cat.id]: null }))
-                  }
-                />
-                不戴
-              </label>
+          return (
+            <div key={cat.id} className="wear-category">
+              <h3>
+                {cat.name_zh}
+                <span style={{ fontSize: '0.8rem', color: '#999', marginLeft: 8 }}>
+                  {selections[cat.id] ? '已选 1 件' : '未选'}
+                </span>
+              </h3>
 
-              {/* 首饰选项 */}
-              {itemsMap[cat.id]?.map((item) => (
-                <label
-                  key={item.id}
-                  className={`picker-item ${
-                    selections[cat.id] === item.id ? 'selected' : ''
-                  }`}
-                >
-                  <input
-                    type="radio"
-                    name={`cat-${cat.id}`}
-                    checked={selections[cat.id] === item.id}
-                    onChange={() => toggleItem(cat.id, item.id)}
+              {/* 组合图：缩略图 + 点击全屏放大，已佩戴格子标红 */}
+              {catItems.length > 0 && (() => {
+                const pairs = catItems
+                  .filter((it) => it.image_path !== null)
+                  .map((it) => ({ path: it.image_path as string, id: it.id }));
+                return (
+                  <CompositeImage
+                    imagePaths={pairs.map((p) => p.path)}
+                    itemIds={pairs.map((p) => p.id)}
+                    wornItemIds={wornItemIds[cat.id]}
+                    categoryName={cat.name_zh}
                   />
-                  {item.image_path ? (
-                    <ImageWithFallback src={item.image_path} alt="" />
-                  ) : (
-                    <div
-                      className="img-fallback"
-                      style={{ width: 80, height: 80 }}
-                    >
-                      🖼️
-                    </div>
-                  )}
-                  {getDisplayName(item.image_path) && (
-                    <span style={{ fontSize: '0.7rem', color: '#666', marginTop: 2, display: 'block', textAlign: 'center' }}>
-                      {getDisplayName(item.image_path)}
-                    </span>
-                  )}
-                </label>
-              ))}
+                );
+              })()}
+
+              {catItems.length === 0 ? (
+                <p style={{ color: '#ccc', fontSize: '0.85rem', padding: '8px 0' }}>
+                  该分类暂无首饰
+                </p>
+              ) : (
+                <div className="item-picker">
+                  {/* 不选 */}
+                  <label
+                    className={`picker-item none ${!selections[cat.id] ? 'selected' : ''}`}
+                  >
+                    <input
+                      type="radio"
+                      name={`cat-${cat.id}`}
+                      checked={!selections[cat.id]}
+                      onChange={() =>
+                        setSelections((prev) => ({ ...prev, [cat.id]: null }))
+                      }
+                    />
+                    不戴
+                  </label>
+
+                  {/* 首饰选项 */}
+                  {catItems.map((item) => {
+                    const isWorn = (catWornSet ?? []).includes(item.id);
+                    return (
+                      <label
+                        key={item.id}
+                        className={`picker-item ${
+                          selections[cat.id] === item.id ? 'selected' : ''
+                        } ${isWorn ? 'worn' : ''}`}
+                      >
+                        <input
+                          type="radio"
+                          name={`cat-${cat.id}`}
+                          checked={selections[cat.id] === item.id}
+                          onChange={() => toggleItem(cat.id, item.id)}
+                        />
+                        <div className="picker-img-wrapper">
+                          {item.image_path ? (
+                            <ImageWithFallback src={item.image_path} alt="" />
+                          ) : (
+                            <div
+                              className="img-fallback"
+                              style={{ width: 80, height: 80 }}
+                            >
+                              🖼️
+                            </div>
+                          )}
+                          {isWorn && (
+                            <span className="worn-badge">已佩戴</span>
+                          )}
+                        </div>
+                        {getDisplayName(item.image_path) && (
+                          <span style={{ fontSize: '0.7rem', color: '#666', marginTop: 2, display: 'block', textAlign: 'center' }}>
+                            {getDisplayName(item.image_path)}
+                          </span>
+                        )}
+                      </label>
+                    );
+                  })}
+                </div>
+              )}
             </div>
-          )}
-        </div>
-      ))}
+          );
+        })}
 
       {/* 底部提交栏 — 始终显示，支持创建和修改 */}
       <div className="submit-bar">

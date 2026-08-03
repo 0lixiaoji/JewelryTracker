@@ -15,7 +15,7 @@ import type {
 
 import { listCategories, getCategoryItems } from '../db/services/categories';
 import { createItem as dbCreateItem, createItemsBatch as dbCreateItemsBatch, updateItem as dbUpdateItem, deleteItem as dbDeleteItem, replaceItemImage as dbReplaceItemImage } from '../db/services/items';
-import { createDailyWear as dbCreateDailyWear, updateDailyWear as dbUpdateDailyWear } from '../db/services/wear';
+import { createDailyWear as dbCreateDailyWear, updateDailyWear as dbUpdateDailyWear, getWornItemsSinceLastNormalization as dbGetWornItemsSinceLastNormalization } from '../db/services/wear';
 import { normalizeCategory as dbNormalizeCategory } from '../db/services/normalization';
 import { listHistory as dbListHistory } from '../db/services/history';
 import { initDatabase, getDBSync } from '../db/database';
@@ -269,4 +269,15 @@ export async function fetchHistory(
 ): Promise<HistoryPage> {
   await ensureInit();
   return dbListHistory(page, pageSize);
+}
+
+// ── 已佩戴查询 ───────────────────────────────────────────────────
+
+/**
+ * 查询每个分类中自上次归一化以来已佩戴过的首饰 ID 列表
+ * 用于 DailyWear 页面展示「已佩戴」标记
+ */
+export async function fetchWornItemIds(): Promise<Record<number, number[]>> {
+  await ensureInit();
+  return dbGetWornItemsSinceLastNormalization();
 }
