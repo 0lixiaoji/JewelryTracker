@@ -14,12 +14,12 @@ import type {
 } from './types';
 
 import { listCategories, getCategoryItems } from '../db/services/categories';
-import { createItem as dbCreateItem, createItemsBatch as dbCreateItemsBatch, updateItem as dbUpdateItem, deleteItem as dbDeleteItem } from '../db/services/items';
+import { createItem as dbCreateItem, createItemsBatch as dbCreateItemsBatch, updateItem as dbUpdateItem, deleteItem as dbDeleteItem, replaceItemImage as dbReplaceItemImage } from '../db/services/items';
 import { createDailyWear as dbCreateDailyWear, updateDailyWear as dbUpdateDailyWear } from '../db/services/wear';
 import { normalizeCategory as dbNormalizeCategory } from '../db/services/normalization';
 import { listHistory as dbListHistory } from '../db/services/history';
 import { initDatabase, getDBSync } from '../db/database';
-import { getCategoryNextSequence, saveImageBatch } from '../db/services/imageStore';
+import { getCategoryNextSequence, saveImageBatch, isBase64, deleteImage } from '../db/services/imageStore';
 
 // ── 初始化标记 ────────────────────────────────────────────────────
 
@@ -51,6 +51,16 @@ function lookupCategoryName(categoryId: number): string {
     throw new Error(`分类 ${categoryId} 不存在`);
   }
   return result[0].values[0][0] as string;
+}
+
+/** 从 OPFS 文件名解析编号，如 发圈_2.jpg → 2 */
+function parseSequenceFromFilename(filename: string): number {
+  const dotIdx = filename.lastIndexOf('.');
+  const nameWithoutExt = dotIdx > 0 ? filename.slice(0, dotIdx) : filename;
+  const lastUnderscoreIdx = nameWithoutExt.lastIndexOf('_');
+  if (lastUnderscoreIdx < 0) return 1;
+  const num = parseInt(nameWithoutExt.slice(lastUnderscoreIdx + 1), 10);
+  return isNaN(num) ? 1 : num;
 }
 
 // ── 分类 ─────────────────────────────────────────────────────────
@@ -153,6 +163,53 @@ export async function deleteItem(itemId: number): Promise<{ detail: string }> {
   await ensureInit();
   await dbDeleteItem(itemId);
   return { detail: `首饰 ${itemId} 已删除` };
+}
+
+export async function replaceItemImage(itemId: number, newFile: File): Promise<Item> {
+  await ensureInit();
+
+  // 1. 获取当前 item 信息
+  const db = getDBSync();
+  const stmt = db.prepare('SELECT id, category_id, image_path FROM items WHERE id = :id');
+  stmt.bind({ ':id': itemId });
+  if (!stmt.step()) throw new Error(`首饰 ${itemId} 不存在`);
+  const row = stmt.getAsObject();
+  stmt.free();
+
+  const oldPath = row.image_path as string | null;
+  const categoryId = row.category_id as number;
+
+  // 2. 获取分类名
+  const catResult = db.exec('SELECT name_zh FROM categories WHERE id = ' + categoryId);
+  if (!catResult.length || !catResult[0].values.length) {
+    throw new Error(`分类 ${categoryId} 不存在`);
+  }
+  const categoryName = catResult[0].values[0][0] as string;
+
+  // 3. 处理新图片存储
+  let newPath: string;
+  if (oldPath && !isBase64(oldPath)) {
+    // 旧的是 OPFS 文件 → 删旧写新，复用文件名
+    try {
+      await deleteImage(oldPath);
+    } catch { /* 旧文件可能已不存在 */ }
+    const seq = parseSequenceFromFilename(oldPath);
+    const filenames = await saveImageBatch(categoryName, [newFile], [seq]);
+    newPath = filenames[0];
+  } else {
+    // 旧的是 base64 或无图片 → 写入 OPFS 新文件
+    try {
+      const sequences = await getCategoryNextSequence(categoryName, 1);
+      const filenames = await saveImageBatch(categoryName, [newFile], sequences);
+      newPath = filenames[0];
+    } catch {
+      // OPFS 不可用 → fallback base64
+      newPath = await readFileAsBase64(newFile);
+    }
+  }
+
+  // 4. 更新 DB
+  return dbReplaceItemImage(itemId, newPath);
 }
 
 // ── 每日佩戴 ─────────────────────────────────────────────────────

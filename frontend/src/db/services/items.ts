@@ -112,6 +112,22 @@ export function updateItem(itemId: number, categoryId: number): Item {
   return rowToItem(row);
 }
 
+export function replaceItemImage(itemId: number, newImagePath: string): Item {
+  const db = getDBSync();
+
+  const existing = getItemById(db, itemId);
+  if (!existing) throw new Error(`首饰 ${itemId} 不存在`);
+
+  db.run('UPDATE items SET image_path = :img WHERE id = :id', {
+    ':img': newImagePath,
+    ':id': itemId,
+  });
+  markDirty();
+
+  const row = getItemById(db, itemId)!;
+  return rowToItem(row);
+}
+
 export async function deleteItem(itemId: number): Promise<void> {
   const db = getDBSync();
 

@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { deleteItem, fetchCategoryItems, normalizeCategory, updateItem } from '../api/client';
+import { deleteItem, fetchCategoryItems, normalizeCategory, replaceItemImage, updateItem } from '../api/client';
 import ConfirmDialog from '../components/ConfirmDialog';
 import EmptyState from '../components/EmptyState';
 import ImageWithFallback from '../components/ImageWithFallback';
@@ -129,6 +129,29 @@ export default function CategoryDetail() {
                       <option key={c.id} value={c.id}>{c.name_zh}</option>
                     ))}
                 </select>
+                <button
+                  className="btn-sm"
+                  onClick={() => {
+                    const input = document.createElement('input');
+                    input.type = 'file';
+                    input.accept = 'image/*';
+                    input.onchange = async (e) => {
+                      const file = (e.target as HTMLInputElement).files?.[0];
+                      if (!file) return;
+                      try {
+                        const updated = await replaceItemImage(item.id, file);
+                        setItems((prev) => prev.map((it) => (it.id === item.id ? updated : it)));
+                        notify('图片已更新', 'success');
+                      } catch (err) {
+                        notify(err instanceof Error ? err.message : '换图失败', 'error');
+                      }
+                    };
+                    input.click();
+                  }}
+                  title="更换图片"
+                >
+                  🖼️
+                </button>
                 <button
                   className="btn-danger"
                   onClick={() => setDeleteTarget(item)}
