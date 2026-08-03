@@ -21,10 +21,10 @@ const config: CapacitorConfig = {
 
   plugins: {
     SplashScreen: {
-      launchShowDuration: 2000,       // 启动页显示 2 秒
-      backgroundColor: '#fdf6f0',     // 与网站背景色一致
+      launchShowDuration: 2000,
+      backgroundColor: '#2c2416',     // 与 windowBackground 底色一致
       showSpinner: false,
-      androidScaleType: 'CENTER_CROP',
+      launchAutoHide: false,          // JS 端 hideSplashScreen() 手动隐藏
     },
     StatusBar: {
       style: 'dark',                  // 浅色背景用深色状态栏文字
