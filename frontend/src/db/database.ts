@@ -271,7 +271,7 @@ export async function exportDatabase(): Promise<string | null> {
   const database = getDBSync();
   const data = database.export();
   const bytes = new Uint8Array(data);
-  const filename = `jewelry-backup-${new Date().toISOString().slice(0, 10)}.db`;
+  const filename = `jewelry-backup-${getLocalDateString()}.db`;
 
   // 尝试原生分享
   const handled = await nativeSaveAndShare(bytes, filename);
@@ -324,10 +324,19 @@ export async function importDatabase(file: File): Promise<void> {
 const BACKUP_PREFIX = 'jewelry-backup-';
 const BACKUP_LIST_KEY = 'jewelry_backup_list';
 
+/** 获取本地时区日期字符串 YYYY-MM-DD（中国时间 UTC+8） */
+function getLocalDateString(date?: Date): string {
+  const d = date ?? new Date();
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
 /** 每天自动备份一次，清理 30 天前的旧备份 */
 export async function autoBackup(): Promise<void> {
   const lastBackup = localStorage.getItem('jewelry_last_backup_date');
-  const today = new Date().toISOString().slice(0, 10);
+  const today = getLocalDateString();
 
   if (lastBackup === today) return;
 
@@ -359,7 +368,7 @@ export async function autoBackup(): Promise<void> {
     // 清理 30 天前的旧备份
     const cutoff = new Date();
     cutoff.setDate(cutoff.getDate() - 30);
-    const cutoffStr = cutoff.toISOString().slice(0, 10);
+    const cutoffStr = getLocalDateString(cutoff);
     const remaining: string[] = [];
 
     for (const name of list) {
