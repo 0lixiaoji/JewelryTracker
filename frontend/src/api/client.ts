@@ -208,8 +208,10 @@ export async function replaceItemImage(itemId: number, newFile: File): Promise<I
     }
   }
 
-  // 4. 更新 DB
-  return dbReplaceItemImage(itemId, newPath);
+  // 4. 更新 DB（DB 存干净路径）
+  const updated = await dbReplaceItemImage(itemId, newPath);
+  // 追加缓存破坏参数，确保前端组件能检测到 src 变化并重新解析 blob URL
+  return { ...updated, image_path: `${newPath}?t=${Date.now()}` };
 }
 
 // ── 每日佩戴 ─────────────────────────────────────────────────────

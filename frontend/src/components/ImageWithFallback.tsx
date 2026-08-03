@@ -20,19 +20,21 @@ export default function ImageWithFallback({ src, alt, className = '' }: Props) {
     () => isBase64(src) ? src : undefined,
   );
 
-  useEffect(() => {
-    // 已有解析结果，无需重复处理
-    if (resolvedSrc) return;
+  // 去掉缓存破坏参数（如 ?t=1234567890），获取实际文件名用于 OPFS 查找
+  const opfsPath = src.includes('?') ? src.split('?')[0] : src;
 
+  useEffect(() => {
     // base64 格式直接使用
     if (isBase64(src)) {
       setResolvedSrc(src);
       return;
     }
 
-    // 文件名格式：从 OPFS 异步读取
+    // 文件名格式：从 OPFS 异步读取（使用去掉 ?t= 后的实际文件名）
+    // src 变化时（如替换图片后附加了新时间戳）强制重新获取，不再短路
+    setFailed(false);
     let cancelled = false;
-    getImageBlobUrl(src).then((url) => {
+    getImageBlobUrl(opfsPath).then((url) => {
       if (!cancelled && url) {
         setResolvedSrc(url);
       } else if (!cancelled) {
@@ -43,7 +45,7 @@ export default function ImageWithFallback({ src, alt, className = '' }: Props) {
     });
 
     return () => { cancelled = true; };
-  }, [src, resolvedSrc]);
+  }, [src]);
 
   // 正在从 OPFS 加载（短暂占位）
   if (!resolvedSrc && !failed) {
