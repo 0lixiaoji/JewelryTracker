@@ -4,6 +4,8 @@
  * - 使用方式：直接 import，内部自动判断平台
  */
 
+import { handleBack as handleFullscreenBack } from '../utils/fullscreenBackInterceptor';
+
 // ── 判断是否运行在 Capacitor 原生环境 ─────────────────────────────
 
 export function isNative(): boolean {
@@ -157,6 +159,9 @@ export function setupBackButton(): void {
 
   import('@capacitor/app').then(({ App }) => {
     App.addListener('backButton', ({ canGoBack }) => {
+      // 优先关闭全屏查看器，而非回退路由
+      if (handleFullscreenBack()) return;
+
       if (canGoBack) {
         // WebView 有历史记录 → SPA 路由回退
         window.history.back();

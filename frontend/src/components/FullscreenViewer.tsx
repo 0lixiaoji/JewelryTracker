@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { registerBackInterceptor } from '../utils/fullscreenBackInterceptor';
 
 interface Props {
   src: string;
@@ -193,6 +194,12 @@ export default function FullscreenViewer({
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
+  }, [open, onClose]);
+
+  // 拦截系统返回手势 / 按键 → 关闭查看器而非回退路由
+  useEffect(() => {
+    if (!open) return;
+    return registerBackInterceptor(onClose);
   }, [open, onClose]);
 
   // ── 阻止 body 滚动 ────────────────────────────────────

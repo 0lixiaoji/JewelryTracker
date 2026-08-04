@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
+import { handleBack } from '../utils/fullscreenBackInterceptor';
 
 /** 左边缘检测宽度（px） */
 const EDGE_WIDTH = 30;
@@ -55,7 +56,10 @@ export function useSwipeBack() {
 
     const dx = currentX.current - startX.current;
     if (dx >= SWIPE_THRESHOLD) {
-      navigate(-1);
+      // 优先关闭全屏查看器，而非回退路由
+      if (!handleBack()) {
+        navigate(-1);
+      }
     }
 
     // 重置指示器（延迟让动画自然结束）
