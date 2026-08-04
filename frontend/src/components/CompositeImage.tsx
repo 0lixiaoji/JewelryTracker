@@ -104,8 +104,7 @@ export default function CompositeImage({
         const ctx = canvas.getContext('2d');
         if (!ctx) return;
 
-        ctx.fillStyle = '#423825';
-        ctx.fillRect(0, 0, cw, ch);
+        ctx.clearRect(0, 0, cw, ch);
 
         for (let i = 0; i < entries.length; i++) {
           if (cancelled) return;
@@ -125,8 +124,6 @@ export default function CompositeImage({
           const dw = img.naturalWidth * scale;
           const dh = img.naturalHeight * scale;
 
-          ctx.fillStyle = '#423825';
-          ctx.fillRect(x, y, w, h);
           ctx.drawImage(img, x + (w - dw) / 2, y + (h - dh) / 2, dw, dh);
 
           const isWorn = wornSet.has(id);
@@ -176,14 +173,14 @@ export default function CompositeImage({
         // 优先 toBlob（轻量），失败则回退 toDataURL
         let url: string | null = null;
         const blob = await new Promise<Blob | null>((resolve) =>
-          canvas.toBlob((b) => resolve(b), 'image/jpeg', 0.85),
+          canvas.toBlob((b) => resolve(b), 'image/png'),
         );
         if (blob) {
           url = URL.createObjectURL(blob);
         } else {
           // toBlob 回调返回 null（部分旧 WebView）→ 回退
           try {
-            const dataUrl = canvas.toDataURL('image/jpeg', 0.85);
+            const dataUrl = canvas.toDataURL('image/png');
             if (dataUrl && dataUrl.length > 100) url = dataUrl;
           } catch { /* ignore */ }
         }

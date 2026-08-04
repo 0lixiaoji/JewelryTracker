@@ -545,15 +545,11 @@ button:disabled { background: #6e6250; cursor: not-allowed; }
 .composite-thumb {
   position: relative;
   margin-bottom: 12px;
-  border-radius: 8px;
-  overflow: hidden;
-  box-shadow: 0 1px 4px rgba(0,0,0,.35);
   cursor: pointer;
-  background: #423825;
+  background: transparent;
   display: block;
   width: 100%;
   min-height: 60px;
-  border: 1px solid #3e3424;
 }
 
 .composite-thumb img {
@@ -577,7 +573,7 @@ button:disabled { background: #6e6250; cursor: not-allowed; }
 .composite-fallback {
   width: 100%;
   height: 100px;
-  background: #4a3e2a;
+  background: transparent;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -590,10 +586,7 @@ button:disabled { background: #6e6250; cursor: not-allowed; }
 .composite-loading {
   width: 100%;
   height: 100px;
-  background: #403525;
-  background-image: linear-gradient(90deg, #403525 0%, #4a3e2a 40%, #403525 80%);
-  background-size: 200% 100%;
-  animation: img-loading-shimmer 1.2s ease-in-out infinite;
+  background: transparent;
   border-radius: 8px;
   margin-bottom: 12px;
 }
