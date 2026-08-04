@@ -50,11 +50,16 @@ body {
   font-size: 0.95rem;
   padding: 4px 8px;
   border-radius: 4px;
+  transition: background 0.15s;
+}
+
+.app-header nav a:active {
+  background: rgba(240, 192, 96, 0.18);
 }
 
 .app-header nav a.active {
   color: #f0c060;
-  background: #3a1a28;
+  background: #3e2e18;
   font-weight: 600;
 }
 
