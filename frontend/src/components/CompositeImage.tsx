@@ -104,7 +104,7 @@ export default function CompositeImage({
         const ctx = canvas.getContext('2d');
         if (!ctx) return;
 
-        ctx.fillStyle = '#fafafa';
+        ctx.fillStyle = '#423825';
         ctx.fillRect(0, 0, cw, ch);
 
         for (let i = 0; i < entries.length; i++) {
@@ -125,7 +125,7 @@ export default function CompositeImage({
           const dw = img.naturalWidth * scale;
           const dh = img.naturalHeight * scale;
 
-          ctx.fillStyle = '#fafafa';
+          ctx.fillStyle = '#423825';
           ctx.fillRect(x, y, w, h);
           ctx.drawImage(img, x + (w - dw) / 2, y + (h - dh) / 2, dw, dh);
 
@@ -142,7 +142,7 @@ export default function CompositeImage({
               const nameBarH = Math.max(18, h * 0.14);
               ctx.fillStyle = 'rgba(0, 0, 0, 0.45)';
               ctx.fillRect(x, y, w, nameBarH);
-              ctx.fillStyle = '#fff';
+              ctx.fillStyle = '#ff0066';
               ctx.font = `${Math.max(11, nameBarH * 0.55)}px sans-serif`;
               ctx.textAlign = 'center';
               ctx.textBaseline = 'middle';
@@ -151,9 +151,9 @@ export default function CompositeImage({
 
             // 已佩戴红色条 → 底部
             const barH = Math.max(20, h * 0.18);
-            ctx.fillStyle = 'rgba(211, 47, 47, 0.78)';
+            ctx.fillStyle = 'rgba(224, 136, 120, 0.82)';
             ctx.fillRect(x, y + h - barH, w, barH);
-            ctx.fillStyle = '#fff';
+            ctx.fillStyle = '#ff0066';
             ctx.font = `bold ${Math.max(12, barH * 0.6)}px sans-serif`;
             ctx.textAlign = 'center';
             ctx.textBaseline = 'middle';
@@ -164,7 +164,7 @@ export default function CompositeImage({
               const nameBarH = Math.max(18, h * 0.14);
               ctx.fillStyle = 'rgba(0, 0, 0, 0.45)';
               ctx.fillRect(x, y + h - nameBarH, w, nameBarH);
-              ctx.fillStyle = '#fff';
+              ctx.fillStyle = '#ff0066';
               ctx.font = `${Math.max(11, nameBarH * 0.55)}px sans-serif`;
               ctx.textAlign = 'center';
               ctx.textBaseline = 'middle';

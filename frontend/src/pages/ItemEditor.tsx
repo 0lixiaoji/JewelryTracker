@@ -280,7 +280,7 @@ export default function ItemEditor() {
         {/* ── 自定义起始编号（可选） ── */}
         <label style={{ fontWeight: 600 }}>
           自定义起始编号
-          <span style={{ fontWeight: 400, color: '#999', fontSize: '0.8rem', marginLeft: 8 }}>
+          <span style={{ fontWeight: 400, color: '#8ec8b8', fontSize: '0.8rem', marginLeft: 8 }}>
             （可选，留空自动分配）
           </span>
           <input
@@ -299,7 +299,7 @@ export default function ItemEditor() {
           {submitting ? '提交中…' : hasEntries ? `录入 ${batchEntries.length} 件` : '录入'}
         </button>
         {!canSubmit && (
-          <p style={{ color: '#999', fontSize: '0.8rem' }}>
+          <p style={{ color: '#8ec8b8', fontSize: '0.8rem' }}>
             {!hasEntries && categoryId === '' && '请上传图片并选择分类'}
             {!hasEntries && categoryId !== '' && '请先上传图片'}
             {hasEntries && categoryId === '' && '请先选择分类'}

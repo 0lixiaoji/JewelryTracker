@@ -171,13 +171,12 @@ export default function CategoryDetail() {
               {/* 底部信息 */}
               <div className="item-meta">
                 {getDisplayName(item.image_path) && (
-                  <span style={{ fontSize: '0.8rem', fontWeight: 600, color: '#333' }}>
+                  <span style={{ fontSize: '0.8rem', fontWeight: 600, color: '#ff0066' }}>
                     {getDisplayName(item.image_path)}
                   </span>
                 )}
-                <span style={{ fontSize: '0.75rem', color: '#999' }}>
-                  佩戴 {item.usage_count} 次
-                </span>
+                <span style={{ fontSize: '0.75rem', color: '#8ec8b8' }}>
+                  佩戴 {item.usage_count} 次</span>
               </div>
             </div>
           ))}

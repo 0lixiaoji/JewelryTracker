@@ -71,7 +71,7 @@ export default function History() {
             <div key={rec.id} className="history-day">
               <h3>
                 {friendlyDate(rec.worn_at)}
-                <span style={{ fontSize: '0.8rem', color: '#999', marginLeft: 12 }}>
+                <span style={{ fontSize: '0.8rem', color: '#8ec8b8', marginLeft: 12 }}>
                   {rec.items.length} 件
                 </span>
               </h3>
@@ -91,7 +91,7 @@ export default function History() {
                         left: 0,
                         right: 0,
                         background: 'rgba(0, 0, 0, 0.45)',
-                        color: '#fff',
+                        color: '#ff0066',
                         fontSize: '0.6rem',
                         padding: '2px 0',
                         textAlign: 'center',

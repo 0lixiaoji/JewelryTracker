@@ -128,7 +128,7 @@ export default function Dashboard() {
         </div>
         {canNormalizeAny && (
           <div className="stat-item">
-            <span className="stat-value" style={{ color: '#2e7d32' }}>✓</span>
+            <span className="stat-value" style={{ color: '#7db87d' }}>✓</span>
             <span className="stat-label">可归一化</span>
           </div>
         )}
@@ -147,7 +147,7 @@ export default function Dashboard() {
               {CATEGORY_ICONS[cat.name_zh] ?? '📦'}
             </div>
             <h3>{cat.name_zh}</h3>
-            <p style={{ color: '#666', fontSize: '0.9rem' }}>
+            <p style={{ color: '#8ec8b8', fontSize: '0.9rem' }}>
               {cat.item_count} 件
             </p>
             {cat.can_normalize && (
@@ -168,8 +168,8 @@ export default function Dashboard() {
       </div>
 
       {/* 数据备份 */}
-      <div style={{ marginTop: 32, padding: '16px 0', borderTop: '1px solid #eee' }}>
-        <h3 style={{ fontSize: '0.95rem', marginBottom: 12, color: '#666' }}>数据备份</h3>
+      <div style={{ marginTop: 32, padding: '16px 0', borderTop: '1px solid #3e3424' }}>
+        <h3 style={{ fontSize: '0.95rem', marginBottom: 12, color: '#f0c060' }}>数据备份</h3>
         <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
           <button className="btn-outline btn-sm" onClick={handleExport} disabled={exporting}>
             {exporting ? '⏳ 导出中…' : '📥 导出数据库'}
@@ -188,11 +188,11 @@ export default function Dashboard() {
             />
           </label>
         </div>
-        <p style={{ fontSize: '0.75rem', color: '#999', marginTop: 8 }}>
+        <p style={{ fontSize: '0.75rem', color: '#8ec8b8', marginTop: 8 }}>
           每天自动备份，保留最近 30 天 · 上次：
           {localStorage.getItem('jewelry_last_backup_date') || '暂无'}
         </p>
-        <p style={{ fontSize: '0.7rem', color: '#bbb', marginTop: 4 }}>
+        <p style={{ fontSize: '0.7rem', color: '#6e6250', marginTop: 4 }}>
           ver 7.30.6 · {import.meta.env.MODE}
         </p>
       </div>
@@ -205,7 +205,7 @@ export default function Dashboard() {
           <div className="confirm-box" onClick={(e) => e.stopPropagation()} style={{ maxWidth: 400 }}>
             <h3 style={{ marginTop: 0 }}>📂 自动备份</h3>
             {backupList.length === 0 ? (
-              <p style={{ color: '#999' }}>暂无备份，明天打开 App 后自动创建</p>
+              <p style={{ color: '#8ec8b8' }}>暂无备份，明天打开 App 后自动创建</p>
             ) : (
               <div style={{ maxHeight: 300, overflow: 'auto' }}>
                 {backupList.map((name) => {
@@ -213,7 +213,7 @@ export default function Dashboard() {
                   return (
                     <div key={name} style={{
                       display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                      padding: '8px 0', borderBottom: '1px solid #f0f0f0',
+                      padding: '8px 0', borderBottom: '1px solid #2e3048',
                     }}>
                       <span>📄 {dateStr}</span>
                       <button className="btn-outline btn-sm" onClick={() => handleDownloadBackup(name)}>
@@ -240,7 +240,7 @@ export default function Dashboard() {
         <div className="confirm-overlay" onClick={() => setExportUrl('')}>
           <div className="confirm-box" onClick={(e) => e.stopPropagation()} style={{ maxWidth: 400 }}>
             <h3 style={{ marginTop: 0 }}>📥 导出数据库</h3>
-            <p style={{ fontSize: '0.85rem', color: '#666', marginBottom: 16 }}>
+            <p style={{ fontSize: '0.85rem', color: '#8ec8b8', marginBottom: 16 }}>
               将在系统浏览器中打开下载页面
             </p>
             <button

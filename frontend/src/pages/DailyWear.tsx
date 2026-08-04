@@ -126,7 +126,7 @@ export default function DailyWear() {
       </div>
 
       {todayRecord && (
-        <p style={{ color: '#2e7d32', fontSize: '0.9rem', marginBottom: 16 }}>
+        <p style={{ color: '#7db87d', fontSize: '0.9rem', marginBottom: 16 }}>
           今日已记录，可修改后重新提交。
         </p>
       )}
@@ -138,7 +138,7 @@ export default function DailyWear() {
             <div key={cat.id} className="wear-category">
               <h3>
                 {cat.name_zh}
-                <span style={{ fontSize: '0.8rem', color: '#999', marginLeft: 8 }}>
+                <span style={{ fontSize: '0.8rem', color: '#8ec8b8', marginLeft: 8 }}>
                   {selections[cat.id] ? '已选 1 件' : '未选'}
                 </span>
               </h3>
@@ -161,7 +161,7 @@ export default function DailyWear() {
               })()}
 
               {catItems.length === 0 ? (
-                <p style={{ color: '#ccc', fontSize: '0.85rem', padding: '8px 0' }}>
+                <p style={{ color: '#8ec8b8', fontSize: '0.85rem', padding: '8px 0' }}>
                   该分类暂无首饰
                 </p>
               ) : (

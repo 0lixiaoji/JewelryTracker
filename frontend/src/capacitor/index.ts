@@ -131,7 +131,7 @@ export async function setStatusBar(style: 'light' | 'dark' = 'dark'): Promise<vo
   try {
     const { StatusBar, Style } = await import('@capacitor/status-bar');
     await StatusBar.setStyle({ style: style === 'dark' ? Style.Dark : Style.Light });
-    await StatusBar.setBackgroundColor({ color: '#fdf6f0' });
+    await StatusBar.setBackgroundColor({ color: '#2c2416' });
   } catch {
     // 静默失败
   }
