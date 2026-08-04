@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { createItemsBatch } from '../api/client';
 import { isNative, pickFromGallery, takePhoto } from '../capacitor';
+import ImageCropper from '../components/ImageCropper';
 import { useCategories } from '../contexts/CategoryContext';
 import { useNotification } from '../contexts/NotificationContext';
 
@@ -32,6 +33,7 @@ export default function ItemEditor() {
   const [submitting, setSubmitting] = useState(false);
   const [dragOver, setDragOver] = useState(false);
   const [customStartSeq, setCustomStartSeq] = useState('');
+  const [croppingIndex, setCroppingIndex] = useState<number | null>(null);
 
   // ── 清理 object URL ────────────────────────────────────────
   useEffect(() => {
@@ -81,6 +83,19 @@ export default function ItemEditor() {
     batchEntries.forEach((e) => URL.revokeObjectURL(e.previewUrl));
     setBatchEntries([]);
     if (fileInputRef.current) fileInputRef.current.value = '';
+  };
+
+  // ── 裁剪回调：替换原图为裁剪后的版本 ──────────────────
+  const handleCropResult = (croppedFile: File, previewUrl: string) => {
+    setBatchEntries((prev) =>
+      prev.map((entry, i) => {
+        if (i !== croppingIndex) return entry;
+        // 释放旧 blob URL，避免内存泄漏
+        URL.revokeObjectURL(entry.previewUrl);
+        return { file: croppedFile, previewUrl };
+      }),
+    );
+    setCroppingIndex(null);
   };
 
   // ── 拖拽事件 ────────────────────────────────────────────────
@@ -230,6 +245,13 @@ export default function ItemEditor() {
                   <div className="batch-preview-actions">
                     <button
                       type="button"
+                      onClick={() => setCroppingIndex(idx)}
+                      title="裁剪此图片"
+                    >
+                      ✂
+                    </button>
+                    <button
+                      type="button"
                       onClick={() => removeEntry(idx)}
                       title="移除此图片"
                     >
@@ -307,6 +329,15 @@ export default function ItemEditor() {
           </p>
         )}
       </form>
+
+      {/* ── 裁剪弹窗 ── */}
+      <ImageCropper
+        open={croppingIndex !== null}
+        imageUrl={croppingIndex !== null ? batchEntries[croppingIndex].previewUrl : ''}
+        fileName={croppingIndex !== null ? batchEntries[croppingIndex].file.name : ''}
+        onCrop={handleCropResult}
+        onCancel={() => setCroppingIndex(null)}
+      />
     </div>
   );
 }

@@ -53,11 +53,15 @@ export async function takePhoto(): Promise<File | null> {
       '@capacitor/camera'
     );
 
+    // 注：allowEditing 设为 false，因为 Android 上 @capacitor/camera 插件
+    // 在裁剪后回调中存在 bug — 裁剪编辑器通过 EXTRA_OUTPUT 写入结果后
+    // 返回 RESULT_OK 但 intent data 为 null，插件误判为"用户取消"。
+    // 如需裁剪，可在 ItemEditor 页面后续接入 JS 裁剪库（如 cropperjs）。
     const photo = await Camera.getPhoto({
       resultType: CameraResultType.DataUrl,
       source: CameraSource.Camera,
       quality: 90,
-      allowEditing: true,
+      allowEditing: false,
       correctOrientation: true,
       width: 1024,
       height: 1024,
