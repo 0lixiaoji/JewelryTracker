@@ -126,7 +126,6 @@ h2 { color: #f0c060; }
   font-size: 2.6rem;
   line-height: 1;
   margin-bottom: 2px;
-  filter: drop-shadow(0 2px 4px rgba(0,0,0,.3));
 }
 
 .category-card-name {
@@ -135,8 +134,9 @@ h2 { color: #f0c060; }
   font-weight: 600;
   margin: 0;
   letter-spacing: 0.02em;
-  -webkit-text-stroke: 6px #2c2416;
-  paint-order: stroke fill;
+  background: #2c2416;
+  padding: 2px 5px;
+  border-radius: 6px;
 }
 
 .category-card-count {
@@ -144,6 +144,9 @@ h2 { color: #f0c060; }
   align-items: baseline;
   gap: 3px;
   margin-top: 2px;
+  background: #2c2416;
+  padding: 1px 5px;
+  border-radius: 6px;
 }
 
 .category-card-count .count-num {
@@ -151,16 +154,12 @@ h2 { color: #f0c060; }
   font-weight: 500;
   color: #8ec8b8;
   line-height: 1;
-  -webkit-text-stroke: 5px #2c2416;
-  paint-order: stroke fill;
 }
 
 .category-card-count .count-unit {
   font-size: 0.78rem;
   color: #8ec8b8;
   font-weight: 500;
-  -webkit-text-stroke: 5px #2c2416;
-  paint-order: stroke fill;
 }
 
 .category-card-action {
@@ -568,6 +567,14 @@ button:disabled { background: #524432; color: #9e8e7a; cursor: not-allowed; }
 /* 边线上的中点和角点共享尺寸，无需区分 */
 
 /* ── Button Variants ──────────────────────────────────── */
+.btn-sm { padding: 4px 12px; font-size: 0.8rem; background: #2c2416; color: #f0c060; }
+
+.btn-icon {
+  background: transparent; color: #7dab8e;
+  padding: 2px 6px; font-size: 1rem; line-height: 1;
+}
+.btn-icon:hover { background: #403525; color: #e08878; }
+
 .btn-outline {
   background: transparent; color: #7dab8e;
   border: 1px solid #7dab8e;
@@ -576,14 +583,6 @@ button:disabled { background: #524432; color: #9e8e7a; cursor: not-allowed; }
 
 .btn-danger { background: #e08878; color: #2c2416; font-weight: 600; }
 .btn-danger:hover { background: #c87060; }
-
-.btn-sm { padding: 4px 12px; font-size: 0.8rem; }
-
-.btn-icon {
-  background: transparent; color: #7dab8e;
-  padding: 2px 6px; font-size: 1rem; line-height: 1;
-}
-.btn-icon:hover { background: #403525; color: #e08878; }
 
 /* ── Page Header ──────────────────────────────────────── */
 .page-header {
