@@ -85,22 +85,106 @@ h2 { color: #f0c060; }
 /* ── Category Grid ────────────────────────────────────── */
 .category-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
-  gap: 16px;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
   margin-top: 16px;
 }
 
 .category-card {
-  background: #3a3020;
-  border-radius: 8px;
-  padding: 20px;
+  background: linear-gradient(160deg, #3a3020 0%, #2e2618 100%);
+  border: 1px solid #4a3e2a;
+  border-radius: 16px;
+  padding: 20px 14px 16px;
   text-align: center;
-  box-shadow: 0 1px 3px rgba(0,0,0,.4);
+  cursor: pointer;
+  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  position: relative;
+  overflow: hidden;
+  box-shadow: 0 2px 8px rgba(0,0,0,.3);
 }
 
-.category-card h3 a {
-  text-decoration: none;
+.category-card::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 12px;
+  right: 12px;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(212, 160, 72, 0.5), transparent);
+}
+
+.category-card:active {
+  transform: scale(0.97);
+}
+
+.category-card:hover {
+  border-color: #5a4e38;
+  box-shadow: 0 6px 20px rgba(0,0,0,.5);
+}
+
+.category-card-icon {
+  font-size: 2.6rem;
+  line-height: 1;
+  margin-bottom: 2px;
+  filter: drop-shadow(0 2px 4px rgba(0,0,0,.3));
+}
+
+.category-card-name {
   color: #f0c060;
+  font-size: 0.95rem;
+  font-weight: 600;
+  margin: 0;
+  letter-spacing: 0.02em;
+}
+
+.category-card-count {
+  display: flex;
+  align-items: baseline;
+  gap: 3px;
+  margin-top: 2px;
+}
+
+.category-card-count .count-num {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #d4a048;
+  line-height: 1;
+}
+
+.category-card-count .count-unit {
+  font-size: 0.78rem;
+  color: #8ec8b8;
+  font-weight: 500;
+}
+
+.category-card-action {
+  margin-top: 6px;
+  background: rgba(212, 160, 72, 0.12);
+  color: #d4a048;
+  border: 1px solid rgba(212, 160, 72, 0.25);
+  border-radius: 20px;
+  padding: 4px 18px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s, border-color 0.2s;
+  letter-spacing: 0.03em;
+}
+
+.category-card-action:hover {
+  background: rgba(212, 160, 72, 0.22);
+  border-color: rgba(212, 160, 72, 0.45);
+}
+
+.category-card-action:disabled {
+  background: rgba(82, 68, 50, 0.3);
+  border-color: rgba(82, 68, 50, 0.3);
+  color: #6e6250;
+  cursor: not-allowed;
 }
 
 .badge {

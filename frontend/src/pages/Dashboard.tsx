@@ -162,19 +162,18 @@ export default function Dashboard() {
             key={cat.id}
             className="category-card"
             onClick={() => navigate(`/categories/${cat.id}`)}
-            style={{ cursor: 'pointer' }}
           >
-            <div style={{ fontSize: '2rem', marginBottom: 8 }}>
+            <div className="category-card-icon">
               {CATEGORY_ICONS[cat.name_zh] ?? '📦'}
             </div>
-            <h3>{cat.name_zh}</h3>
-            <p style={{ color: '#8ec8b8', fontSize: '0.9rem' }}>
-              {cat.item_count} 件
-            </p>
+            <h3 className="category-card-name">{cat.name_zh}</h3>
+            <div className="category-card-count">
+              <span className="count-num">{cat.item_count}</span>
+              <span className="count-unit">件</span>
+            </div>
             {cat.can_normalize && (
               <button
-                className="btn-sm"
-                style={{ marginTop: 8 }}
+                className="category-card-action"
                 disabled={normalizing === cat.id}
                 onClick={(e) => {
                   e.stopPropagation();

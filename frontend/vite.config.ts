@@ -6,7 +6,7 @@ export default defineConfig({
   base: './',
   plugins: [react()],
   optimizeDeps: {
-    exclude: ['sql.js'],
+    include: ['sql.js'],
   },
   server: {
     host: '0.0.0.0',

@@ -136,15 +136,30 @@ export async function initDatabase(): Promise<Database> {
 
   initPromise = (async () => {
     // 加载 sql.js WASM（Vite 会处理 .wasm 文件）
-    SQL = await initSqlJs({
-      locateFile: (file: string) => `${import.meta.env.BASE_URL}${file.replace('sql-wasm.wasm', 'sql-wasm-browser.wasm')}`,
-    });
+    console.log('[initDB] 步骤 1/5: 开始加载 sql.js WASM...');
+    const timeoutId = setTimeout(() => console.error('[initDB] ⚠️ initSqlJs 已等待 5 秒！'), 5000);
+    try {
+      // 手动 fetch WASM 文件，绕过 sql.js 内部加载
+      const wasmRes = await fetch('/sql-wasm-browser.wasm');
+      if (!wasmRes.ok) throw new Error(`WASM fetch failed: ${wasmRes.status}`);
+      const wasmBinary = new Uint8Array(await wasmRes.arrayBuffer());
+      SQL = await initSqlJs({ wasmBinary });
+      clearTimeout(timeoutId);
+      console.log('[initDB] 步骤 1/5: sql.js WASM 加载完成 ✓');
+    } catch (err) {
+      initPromise = null; // 允许重试
+      console.error('[initDB] 步骤 1/5: sql.js WASM 加载失败 ✗', err);
+      throw new Error(`sql.js WASM 加载失败（路径: ${import.meta.env.BASE_URL}sql-wasm-browser.wasm）: ${err instanceof Error ? err.message : String(err)}`);
+    }
 
     // 尝试恢复已有数据库
+    console.log('[initDB] 步骤 2/5: 尝试从 OPFS 恢复数据库...');
     let saved = await loadFromOPFS();
     if (!saved) {
+      console.log('[initDB] 步骤 2/5: OPFS 无数据，尝试 IndexedDB...');
       saved = await loadFromIndexedDB();
     }
+    console.log('[initDB] 步骤 2/5: 数据库恢复完成 (saved=%s)', saved ? `${saved.length} bytes` : 'null');
 
     if (saved && saved.length > 0) {
       // 恢复已有数据库

@@ -4,7 +4,12 @@ import App from './App';
 import { hideSplashScreen, setStatusBar, setupBackButton } from './capacitor';
 import { autoBackup, initDatabase, setupAutoSave } from './db/database';
 
+// ── 全局错误捕获（调试用）──────────────────────────────────────
+window.addEventListener('error', (e) => console.error('[main] 全局错误:', e.error || e.message));
+window.addEventListener('unhandledrejection', (e) => console.error('[main] 未捕获 Promise 拒绝:', e.reason));
+
 // ── 启动时初始化数据库 + 自动保存 ──────────────────────────────
+console.log('[main] 启动 initDatabase...');
 
 Promise.all([
   initDatabase()
@@ -26,11 +31,13 @@ Promise.all([
 
 setupBackButton();
 
+console.log('[main] React 开始渲染...');
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <App />
   </StrictMode>,
 );
+console.log('[main] React render 调用完成');
 
 // ── PWA 更新提示 ─────────────────────────────────────────────────
 
