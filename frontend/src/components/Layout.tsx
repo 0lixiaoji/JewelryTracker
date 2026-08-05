@@ -6,6 +6,7 @@ const NAV_ITEMS = [
   { to: '/daily-wear', label: '每日佩戴' },
   { to: '/items/new', label: '录入首饰' },
   { to: '/history', label: '历史记录' },
+  { to: '/data-browser', label: '数据浏览' },
 ];
 
 export default function Layout() {

@@ -5,7 +5,12 @@ import ConfirmDialog from '../components/ConfirmDialog';
 import LoadingSpinner from '../components/LoadingSpinner';
 import { useCategories } from '../contexts/CategoryContext';
 import { useNotification } from '../contexts/NotificationContext';
-import { downloadBackup, exportDatabase, exportDatabaseWithImages, importDatabase, listBackups } from '../db/database';
+import {
+  downloadBackup,
+  exportDatabaseWithImages,
+  importDatabase,
+  listBackups,
+} from '../db/database';
 
 
 const CATEGORY_ICONS: Record<string, string> = {
@@ -26,19 +31,23 @@ export default function Dashboard() {
   const navigate = useNavigate();
   const [normalizing, setNormalizing] = useState<number | null>(null);
   const [confirmCat, setConfirmCat] = useState<{ id: number; name: string } | null>(null);
-  const [importing, setImporting] = useState(false);
-  const [exportUrl, setExportUrl] = useState('');
+
+  // ── 导出 ─────────────────────────────────────────────────────────
   const [exporting, setExporting] = useState(false);
-  const [exportingFull, setExportingFull] = useState(false);
-  const [exportFullProgress, setExportFullProgress] = useState('');
-  const [showBackups, setShowBackups] = useState(false);
-  const [backupList, setBackupList] = useState<string[]>([]);
+  const [exportProgress, setExportProgress] = useState('');
+
+  // ── 导入 ─────────────────────────────────────────────────────────
+  const [importing, setImporting] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  // ── 备份管理 ─────────────────────────────────────────────────────
+  const [showBackups, setShowBackups] = useState(false);
+  const [backupList, setBackupList] = useState<string[]>([]);
 
   const totalItems = categories.reduce((sum, c) => sum + c.item_count, 0);
   const canNormalizeAny = categories.some((c) => c.can_normalize);
 
+  // ── 归一化 ───────────────────────────────────────────────────────
   const handleNormalize = async (catId: number) => {
     setConfirmCat(null);
     setNormalizing(catId);
@@ -53,6 +62,46 @@ export default function Dashboard() {
     }
   };
 
+  // ── 导出 ─────────────────────────────────────────────────────────
+  const handleExport = async () => {
+    setExporting(true);
+    setExportProgress('准备中…');
+    try {
+      const result = await exportDatabaseWithImages((current, total) => {
+        setExportProgress(`${current}/${total}`);
+      });
+      setExportProgress('');
+      if (result === 'shared') {
+        notify('请在分享面板中选择「保存到文件」', 'success');
+      } else {
+        notify('浏览器下载已开始', 'success');
+      }
+    } catch (e) {
+      setExportProgress('');
+      notify(e instanceof Error ? e.message : '导出失败', 'error');
+    } finally {
+      setExporting(false);
+    }
+  };
+
+  // ── 导入 ─────────────────────────────────────────────────────────
+  const handleImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setImporting(true);
+    try {
+      await importDatabase(file);
+      notify('导入成功，即将刷新', 'success');
+      setTimeout(() => window.location.reload(), 800);
+    } catch (err) {
+      notify(err instanceof Error ? err.message : '导入失败', 'error');
+    } finally {
+      setImporting(false);
+      if (fileInputRef.current) fileInputRef.current.value = '';
+    }
+  };
+
+  // ── 备份管理 ─────────────────────────────────────────────────────
   const handleShowBackups = () => {
     setBackupList(listBackups());
     setShowBackups(true);
@@ -60,65 +109,14 @@ export default function Dashboard() {
 
   const handleDownloadBackup = async (filename: string) => {
     try {
-      await downloadBackup(filename);
-      setShowBackups(false);
+      const result = await downloadBackup(filename);
+      if (result === 'shared') {
+        notify('请在分享面板中选择保存位置', 'success');
+      } else {
+        notify('浏览器下载已开始', 'success');
+      }
     } catch (e) {
       notify(e instanceof Error ? e.message : '下载失败', 'error');
-    }
-  };
-
-  const handleExport = async () => {
-    setExporting(true);
-    try {
-      const fullUrl = await exportDatabase();
-      if (fullUrl) {
-        // Web 模式：需要打开 export.html
-        setExportUrl(fullUrl);
-      } else {
-        // 原生模式：已通过系统分享面板处理
-        notify('已在系统分享面板中打开，请选择保存位置', 'success');
-      }
-    } catch (e) {
-      notify(e instanceof Error ? e.message : '导出失败', 'error');
-    } finally {
-      setExporting(false);
-    }
-  };
-
-  const handleExportFull = async () => {
-    setExportingFull(true);
-    setExportFullProgress('准备中…');
-    try {
-      const result = await exportDatabaseWithImages((current, total) => {
-        setExportFullProgress(`${current}/${total}`);
-      });
-      setExportFullProgress('');
-      if (result === 'shared') {
-        notify('请在分享面板中选择「保存到文件」或发送到微信等', 'success');
-      } else {
-        notify('浏览器下载已开始，请查看下载列表', 'success');
-      }
-    } catch (e) {
-      setExportFullProgress('');
-      notify(e instanceof Error ? e.message : '导出失败', 'error');
-    } finally {
-      setExportingFull(false);
-    }
-  };
-
-  const handleImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    setImporting(true);
-    try {
-      await importDatabase(file);
-      notify('数据库导入成功，即将刷新', 'success');
-      setTimeout(() => window.location.reload(), 800);
-    } catch (err) {
-      notify(err instanceof Error ? err.message : '导入失败', 'error');
-    } finally {
-      setImporting(false);
-      if (fileInputRef.current) fileInputRef.current.value = '';
     }
   };
 
@@ -193,29 +191,31 @@ export default function Dashboard() {
       {/* 数据备份 */}
       <div style={{ marginTop: 32, padding: '16px 0', borderTop: '1px solid #3e3424' }}>
         <h3 style={{ fontSize: '0.95rem', marginBottom: 12, color: '#f0c060' }}>数据备份</h3>
-        <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
-          <button className="btn-outline btn-sm" onClick={handleExport} disabled={exporting}>
-            {exporting ? '⏳ 导出中…' : '📥 导出数据库'}
+        <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', alignItems: 'center' }}>
+          <button className="btn-sm" onClick={handleExport} disabled={exporting}>
+            {exporting
+              ? (exportProgress ? `⏳ ${exportProgress}` : '⏳ 打包中…')
+              : '📥 导出备份'}
           </button>
-          <button className="btn-outline btn-sm" onClick={handleExportFull} disabled={exportingFull}>
-            {exportingFull ? (exportFullProgress ? `⏳ 打包中 ${exportFullProgress}` : '⏳ 打包中…') : '📦 导出数据库+图片'}
-          </button>
-          <button className="btn-outline btn-sm" onClick={handleShowBackups}>
-            📂 查看备份
+          <button className="btn-sm" onClick={handleShowBackups}>
+            📂 管理备份
           </button>
           <label className="btn-outline btn-sm" style={{ cursor: 'pointer' }}>
-            {importing ? '导入中…' : '📤 导入数据库'}
+            {importing ? '⏳ 导入中…' : '📤 导入备份'}
             <input
               ref={fileInputRef}
               type="file"
-              accept=".db"
+              accept=".db,.zip"
               onChange={handleImport}
               hidden
             />
           </label>
+          <button className="btn-outline btn-sm" onClick={() => navigate('/data-browser')}>
+            📊 浏览数据
+          </button>
         </div>
         <p style={{ fontSize: '0.75rem', color: '#8ec8b8', marginTop: 8 }}>
-          每天自动备份，保留最近 30 天 · 上次：
+          每天自动备份（含图片），保留最近 5 天 · 上次：
           {localStorage.getItem('jewelry_last_backup_date') || '暂无'}
         </p>
         <p style={{ fontSize: '0.7rem', color: '#6e6250', marginTop: 4 }}>
@@ -223,26 +223,48 @@ export default function Dashboard() {
         </p>
       </div>
 
-
-
-      {/* 备份列表弹窗 */}
+      {/* ── 备份管理弹窗 ──────────────────────────────────────────── */}
       {showBackups && (
-        <div className="confirm-overlay" onClick={() => setShowBackups(false)}>
-          <div className="confirm-box" onClick={(e) => e.stopPropagation()} style={{ maxWidth: 400 }}>
-            <h3 style={{ marginTop: 0 }}>📂 自动备份</h3>
+        <div className="modal-overlay" onClick={() => setShowBackups(false)}>
+          <div className="modal" onClick={(e) => e.stopPropagation()} style={{ maxWidth: 440 }}>
+            <h3>📂 数据管理</h3>
+
+            {/* 快捷操作 */}
+            <div style={{ marginBottom: 16 }}>
+              <button
+                className="btn-outline btn-sm"
+                style={{ width: '100%' }}
+                onClick={() => { setShowBackups(false); navigate('/data-browser'); }}
+              >
+                📊 浏览数据（含图片）
+              </button>
+            </div>
+
+            <h4 style={{ fontSize: '0.85rem', color: '#8ec8b8', marginBottom: 8, borderTop: '1px solid #3e3424', paddingTop: 12 }}>
+              自动备份 ({backupList.length})
+            </h4>
+
             {backupList.length === 0 ? (
-              <p style={{ color: '#8ec8b8' }}>暂无备份，明天打开 App 后自动创建</p>
+              <p style={{ color: '#6e6250', fontSize: '0.85rem' }}>
+                暂无备份，明天打开 App 后自动创建
+              </p>
             ) : (
-              <div style={{ maxHeight: 300, overflow: 'auto' }}>
+              <div style={{ maxHeight: 260, overflow: 'auto' }}>
                 {backupList.map((name) => {
-                  const dateStr = name.replace('jewelry-backup-', '').replace('.db', '');
+                  const dateStr = name.replace('jewelry-backup-', '').replace('.zip', '').replace('.db', '');
                   return (
-                    <div key={name} style={{
-                      display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                      padding: '8px 0', borderBottom: '1px solid #2e3048',
-                    }}>
+                    <div
+                      key={name}
+                      style={{
+                        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                        padding: '8px 0', borderBottom: '1px solid #2e3048',
+                      }}
+                    >
                       <span>📄 {dateStr}</span>
-                      <button className="btn-outline btn-sm" onClick={() => handleDownloadBackup(name)}>
+                      <button
+                        className="btn-outline btn-sm"
+                        onClick={() => handleDownloadBackup(name)}
+                      >
                         下载
                       </button>
                     </div>
@@ -250,44 +272,17 @@ export default function Dashboard() {
                 })}
               </div>
             )}
-            <button
-              className="btn-outline btn-sm"
-              style={{ width: '100%', marginTop: 12 }}
-              onClick={() => setShowBackups(false)}
-            >
-              关闭
-            </button>
+
+            <div className="modal-actions" style={{ marginTop: 16 }}>
+              <button className="btn-outline btn-sm" onClick={() => setShowBackups(false)}>
+                关闭
+              </button>
+            </div>
           </div>
         </div>
       )}
 
-      {/* 导出下载弹窗 */}
-      {exportUrl && (
-        <div className="confirm-overlay" onClick={() => setExportUrl('')}>
-          <div className="confirm-box" onClick={(e) => e.stopPropagation()} style={{ maxWidth: 400 }}>
-            <h3 style={{ marginTop: 0 }}>📥 导出数据库</h3>
-            <p style={{ fontSize: '0.85rem', color: '#8ec8b8', marginBottom: 16 }}>
-              将在系统浏览器中打开下载页面
-            </p>
-            <button
-              className="btn-sm"
-              style={{ width: '100%', padding: '14px', fontSize: '1rem', marginBottom: 8 }}
-              onClick={() => window.open(exportUrl, '_blank')}
-            >
-              打开下载页面
-            </button>
-            <button
-              className="btn-outline btn-sm"
-              style={{ width: '100%' }}
-              onClick={() => setExportUrl('')}
-            >
-              取消
-            </button>
-          </div>
-        </div>
-      )}
-
-      {/* 归一化确认弹窗 */}
+      {/* ── 归一化确认弹窗 ────────────────────────────────────────── */}
       <ConfirmDialog
         open={confirmCat !== null}
         title="确认归一化"

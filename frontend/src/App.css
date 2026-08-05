@@ -867,3 +867,188 @@ button:disabled { background: #6e6250; cursor: not-allowed; }
   .item-grid { grid-template-columns: repeat(3, 1fr); }
   .picker-item img { width: 56px; height: 56px; }
 }
+
+/* ── Data Browser ──────────────────────────────────────── */
+.dbrowser-layout {
+  display: flex;
+  gap: 16px;
+  margin-top: 12px;
+  min-height: 50vh;
+}
+
+.dbrowser-sidebar {
+  width: 180px;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.dbrowser-table-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 8px 10px;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  color: #f0c060;
+  font-size: 0.85rem;
+  text-align: left;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+}
+.dbrowser-table-btn:hover { background: #3a2e18; }
+.dbrowser-table-btn.active {
+  background: #3e2e18;
+  border-color: #f0c060;
+}
+
+.dbrowser-table-name {
+  flex: 1;
+  font-family: monospace;
+  font-size: 0.8rem;
+}
+.dbrowser-table-count {
+  font-size: 0.7rem;
+  color: #8ec8b8;
+  white-space: nowrap;
+}
+
+.dbrowser-content {
+  flex: 1;
+  min-width: 0;
+}
+
+.dbrowser-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+  padding: 8px 0;
+  border-bottom: 1px solid #3e3424;
+}
+
+.dbrowser-table-wrap {
+  overflow-x: auto;
+  border-radius: 8px;
+  background: #3a3020;
+  box-shadow: 0 1px 3px rgba(0,0,0,.4);
+}
+
+.dbrowser-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.8rem;
+}
+
+.dbrowser-table thead {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+}
+
+.dbrowser-table th {
+  background: #2e2818;
+  color: #f0c060;
+  font-weight: 600;
+  padding: 8px 10px;
+  text-align: left;
+  white-space: nowrap;
+  font-family: monospace;
+  font-size: 0.75rem;
+  border-bottom: 2px solid #483c2a;
+}
+
+.dbrowser-table td {
+  padding: 6px 10px;
+  border-bottom: 1px solid #2e3048;
+  color: #d4c4a0;
+  max-width: 220px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.dbrowser-table tbody tr:hover { background: #403525; }
+.dbrowser-table tbody tr:last-child td { border-bottom: none; }
+
+.dbrowser-row-num {
+  color: #6e6250 !important;
+  font-size: 0.7rem;
+  text-align: center;
+  width: 36px;
+}
+
+.dbrowser-cell {
+  font-family: monospace;
+  font-size: 0.78rem;
+}
+
+@media (max-width: 640px) {
+  .dbrowser-layout {
+    flex-direction: column;
+  }
+  .dbrowser-sidebar {
+    width: 100%;
+    flex-direction: row;
+    flex-wrap: wrap;
+  }
+  .dbrowser-table-btn {
+    width: auto;
+    font-size: 0.75rem;
+    padding: 4px 8px;
+  }
+}
+
+/* ── Image Browser ─────────────────────────────────────── */
+.image-browser-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+  gap: 10px;
+  padding: 4px 0;
+}
+
+.image-browser-item {
+  cursor: pointer;
+  background: #2e2818;
+  border-radius: 8px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  transition: background 0.15s;
+}
+.image-browser-item:hover { background: #3a3020; }
+
+.image-browser-item img {
+  width: 100%;
+  aspect-ratio: 1;
+  object-fit: contain;
+  background: #423825;
+}
+
+.image-browser-label {
+  font-size: 0.65rem;
+  color: #8ec8b8;
+  padding: 4px 6px;
+  text-align: center;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+}
+
+/* ── Export Options ────────────────────────────────────── */
+.export-option:hover {
+  background: #32291a !important;
+}
+.export-option input[type="radio"] {
+  accent-color: #ff0066;
+}
+
+/* ── Modal tweaks ──────────────────────────────────────── */
+.modal h4 {
+  color: #f0c060;
+}

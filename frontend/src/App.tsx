@@ -6,6 +6,7 @@ import { NotificationProvider } from './contexts/NotificationContext';
 import CategoryDetail from './pages/CategoryDetail';
 import DailyWear from './pages/DailyWear';
 import Dashboard from './pages/Dashboard';
+import DataBrowser from './pages/DataBrowser';
 import History from './pages/History';
 import ItemEditor from './pages/ItemEditor';
 import './App.css';
@@ -24,6 +25,7 @@ export default function App() {
               <Route path="/items/new" element={<ItemEditor />} />
               <Route path="/daily-wear" element={<DailyWear />} />
               <Route path="/history" element={<History />} />
+              <Route path="/data-browser" element={<DataBrowser />} />
             </Route>
           </Routes>
         </HashRouter>

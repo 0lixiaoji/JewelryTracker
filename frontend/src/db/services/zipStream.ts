@@ -192,15 +192,18 @@ export class ZipStreamWriter {
  * @param zipFilename 输出文件名（如 `jewelry-fullbackup-2026-08-05.zip`）
  * @returns ZipStreamWriter 实例
  */
-export async function createZipWriter(zipFilename: string): Promise<ZipStreamWriter> {
+export async function createZipWriter(
+  zipFilename: string,
+  parentDir: string = 'temp',
+): Promise<ZipStreamWriter> {
   const root = await navigator.storage.getDirectory();
-  let tempDir: FileSystemDirectoryHandle;
+  let dir: FileSystemDirectoryHandle;
   try {
-    tempDir = await root.getDirectoryHandle('temp', { create: true });
+    dir = await root.getDirectoryHandle(parentDir, { create: true });
   } catch {
-    tempDir = await root.getDirectoryHandle('temp', { create: true });
+    dir = await root.getDirectoryHandle(parentDir, { create: true });
   }
-  const handle = await tempDir.getFileHandle(zipFilename, { create: true });
+  const handle = await dir.getFileHandle(zipFilename, { create: true });
   const writer = new ZipStreamWriter(handle);
   await writer.open();
   return writer;

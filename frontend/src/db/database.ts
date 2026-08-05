@@ -10,7 +10,7 @@
 import initSqlJs, { type Database, type SqlJsStatic } from 'sql.js';
 import { INIT_SQL, MIGRATIONS } from './migration';
 import { nativeSaveAndShare } from '../capacitor/index';
-import { initImageStore, forEachImage, countImages } from './services/imageStore';
+import { initImageStore, forEachImage, countImages, listImageNames, getImageBlobUrl } from './services/imageStore';
 import { createZipWriter, getTempZipFile, removeTempZip } from './services/zipStream';
 import { chunkedNativeShare } from '../capacitor/chunkWriter';
 
@@ -382,33 +382,172 @@ export async function exportDatabaseWithImages(
   return 'download';
 }
 
-/** 导入数据库文件，替换当前数据库 */
+/** 导入数据库文件，替换当前数据库。支持 .db（SQLite）和 .zip（完整备份）。 */
 export async function importDatabase(file: File): Promise<void> {
   if (!SQL) throw new Error('sql.js 未加载');
 
   const buffer = await file.arrayBuffer();
-  const data = new Uint8Array(buffer);
 
-  // 验证是否为有效 SQLite 数据库
+  // ZIP 完整备份：提取 .db + 恢复图片
+  if (file.name.endsWith('.zip')) {
+    await importFromZip(new Uint8Array(buffer));
+    return;
+  }
+
+  await importRawDB(new Uint8Array(buffer));
+}
+
+/** 导入原始 SQLite 数据 */
+async function importRawDB(data: Uint8Array): Promise<void> {
+  if (!SQL) throw new Error('sql.js 未加载');
+
   let newDb: Database | null = null;
   try {
     newDb = new SQL.Database(data);
-    // 验证关键表存在
     newDb.exec('SELECT 1 FROM categories');
   } catch {
     try { newDb?.close(); } catch { /* ignore */ }
     throw new Error('无效的数据库文件：缺少必要的表结构');
   }
 
-  // 替换当前数据库（newDb 已通过验证，必非 null）
   if (db) db.close();
   db = newDb!;
   db.run('PRAGMA foreign_keys = ON');
 
-  // 持久化
   dirty = true;
   await saveSnapshot();
 }
+
+/** 从 ZIP 完整备份导入：提取数据库 + 恢复图片 */
+async function importFromZip(zipData: Uint8Array): Promise<void> {
+  if (!SQL) throw new Error('sql.js 未加载');
+
+  // 动态导入 JSZip（减小首屏包体积）
+  const JSZip = (await import('jszip')).default;
+  const zip = await JSZip.loadAsync(zipData);
+
+  // 查找 .db 文件
+  const dbFileName = Object.keys(zip.files).find((n) => n.endsWith('.db'));
+  if (!dbFileName) throw new Error('ZIP 中未找到数据库文件');
+
+  const dbData = await zip.files[dbFileName].async('uint8array');
+
+  // 验证并替换数据库
+  let newDb: Database | null = null;
+  try {
+    newDb = new SQL.Database(dbData);
+    newDb.exec('SELECT 1 FROM categories');
+  } catch {
+    try { newDb?.close(); } catch { /* ignore */ }
+    throw new Error('ZIP 中的数据库无效：缺少必要的表结构');
+  }
+
+  if (db) db.close();
+  db = newDb!;
+  db.run('PRAGMA foreign_keys = ON');
+
+  // 恢复图片文件到 OPFS
+  const imageEntries = Object.keys(zip.files).filter(
+    (n) => n.startsWith('images/') && n !== 'images/' && !zip.files[n].dir,
+  );
+  if (imageEntries.length > 0) {
+    const root = await navigator.storage.getDirectory();
+    const imagesDir = await root.getDirectoryHandle('images', { create: true });
+
+    for (const imagePath of imageEntries) {
+      const filename = imagePath.replace(/^images\//, '');
+      if (!filename) continue;
+      try {
+        const imgData = await zip.files[imagePath].async('uint8array');
+        const handle = await imagesDir.getFileHandle(filename, { create: true });
+        const writable = await handle.createWritable();
+        await writable.write(imgData);
+        await writable.close();
+      } catch (err) {
+        console.warn(`导入图片 ${filename} 失败:`, err);
+      }
+    }
+  }
+
+  dirty = true;
+  await saveSnapshot();
+}
+
+// ── 数据浏览（DataBrowser 页面用）────────────────────────────────
+
+/** 获取所有用户表名（排除 sqlite_ 内部表） */
+export function getTableNames(): string[] {
+  const database = getDBSync();
+  const result = database.exec(
+    "SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%' ORDER BY name",
+  );
+  if (!result.length) return [];
+  return result[0].values.map((row) => row[0] as string);
+}
+
+/** 获取表的列信息 */
+export function getTableColumns(
+  tableName: string,
+): { cid: number; name: string; type: string; notnull: number; pk: number }[] {
+  const database = getDBSync();
+  const result = database.exec(`PRAGMA table_info('${tableName}')`);
+  if (!result.length) return [];
+  return result[0].values.map((row) => ({
+    cid: row[0] as number,
+    name: row[1] as string,
+    type: row[2] as string,
+    notnull: row[3] as number,
+    pk: row[4] as number,
+  }));
+}
+
+/** 查询表数据（分页） */
+export function queryTableData(
+  tableName: string,
+  offset: number,
+  limit: number,
+): Record<string, unknown>[] {
+  const database = getDBSync();
+  const colsResult = database.exec(`PRAGMA table_info('${tableName}')`);
+  if (!colsResult.length) return [];
+  const columns = colsResult[0].values.map((row) => row[1] as string);
+
+  const stmt = database.prepare(`SELECT * FROM "${tableName}" LIMIT ? OFFSET ?`);
+  stmt.bind([limit, offset] as unknown as Record<string, unknown>);
+  const rows: Record<string, unknown>[] = [];
+  while (stmt.step()) {
+    const row = stmt.getAsObject();
+    const mapped: Record<string, unknown> = {};
+    for (const col of columns) {
+      mapped[col] = row[col];
+    }
+    rows.push(mapped);
+  }
+  stmt.free();
+  return rows;
+}
+
+/** 获取表行数 */
+export function getTableRowCount(tableName: string): number {
+  const database = getDBSync();
+  const result = database.exec(`SELECT COUNT(*) FROM "${tableName}"`);
+  if (!result.length) return 0;
+  return result[0].values[0][0] as number;
+}
+
+/** 获取当前数据库的原始字节（供外部查看器使用） */
+export function getDBBytes(): Uint8Array {
+  const database = getDBSync();
+  return new Uint8Array(database.export());
+}
+
+/** 列出所有图片文件名 */
+export async function listAllImageFiles(): Promise<string[]> {
+  return listImageNames();
+}
+
+/** 获取图片 blob URL（重新导出 imageStore 的函数） */
+export { getImageBlobUrl };
 
 // ── 自动备份 ──────────────────────────────────────────────────────
 
@@ -424,7 +563,7 @@ function getLocalDateString(date?: Date): string {
   return `${year}-${month}-${day}`;
 }
 
-/** 每天自动备份一次，清理 30 天前的旧备份 */
+/** 每天自动备份一次（完整 zip：数据库 + 图片），保留最近 5 天 */
 export async function autoBackup(): Promise<void> {
   const lastBackup = localStorage.getItem('jewelry_last_backup_date');
   const today = getLocalDateString();
@@ -433,37 +572,55 @@ export async function autoBackup(): Promise<void> {
 
   try {
     const database = getDBSync();
-    const data = database.export();
-    const filename = `${BACKUP_PREFIX}${today}.db`;
+    const dbData = database.export();
+    const dbBytes = new Uint8Array(dbData);
+    const dbFilename = `${BACKUP_PREFIX}${today}.db`;
+    const zipFilename = `${BACKUP_PREFIX}${today}.zip`;
 
-    const root = await navigator.storage.getDirectory();
-    let backupsDir: FileSystemDirectoryHandle;
+    // 流式写入 zip 到 backups 目录
+    const writer = await createZipWriter(zipFilename, 'backups');
+
     try {
-      backupsDir = await root.getDirectoryHandle('backups', { create: true });
-    } catch {
-      backupsDir = await root.getDirectoryHandle('backups', { create: true });
-    }
+      await writer.addFile(dbFilename, dbBytes);
 
-    const handle = await backupsDir.getFileHandle(filename, { create: true });
-    const writable = await handle.createWritable();
-    await writable.write(data);
-    await writable.close();
+      await forEachImage(async (name, data) => {
+        await writer.addFile('images/' + name, data);
+      });
+
+      await writer.finalize();
+    } catch (err) {
+      await writer.abort();
+      // 清理失败的 zip 文件
+      try {
+        const root = await navigator.storage.getDirectory();
+        const backupsDir = await root.getDirectoryHandle('backups');
+        await backupsDir.removeEntry(zipFilename);
+      } catch { /* ignore */ }
+      throw err;
+    }
 
     localStorage.setItem('jewelry_last_backup_date', today);
 
     // 记录备份文件
     const list = JSON.parse(localStorage.getItem(BACKUP_LIST_KEY) ?? '[]') as string[];
-    list.push(filename);
+    list.push(zipFilename);
     localStorage.setItem(BACKUP_LIST_KEY, JSON.stringify(list));
 
-    // 清理 30 天前的旧备份
+    // 清理 5 天前的旧备份（包括旧版 .db 和新版 .zip）
     const cutoff = new Date();
-    cutoff.setDate(cutoff.getDate() - 30);
+    cutoff.setDate(cutoff.getDate() - 5);
     const cutoffStr = getLocalDateString(cutoff);
+
+    const root = await navigator.storage.getDirectory();
+    const backupsDir = await root.getDirectoryHandle('backups');
     const remaining: string[] = [];
 
     for (const name of list) {
-      const dateStr = name.slice(BACKUP_PREFIX.length, -3);
+      // 从文件名中提取日期：jewelry-backup-YYYY-MM-DD.zip 或 .db
+      const dateStr = name
+        .replace(BACKUP_PREFIX, '')
+        .replace('.zip', '')
+        .replace('.db', '');
       if (dateStr < cutoffStr) {
         await backupsDir.removeEntry(name).catch(() => {});
       } else {
@@ -479,11 +636,15 @@ export async function autoBackup(): Promise<void> {
 /** 获取所有备份文件列表（按日期倒序） */
 export function listBackups(): string[] {
   const list = JSON.parse(localStorage.getItem(BACKUP_LIST_KEY) ?? '[]') as string[];
-  return list.filter((n) => n.startsWith(BACKUP_PREFIX) && n.endsWith('.db')).sort().reverse();
+  return list
+    .filter((n) => n.startsWith(BACKUP_PREFIX) && (n.endsWith('.zip') || n.endsWith('.db')))
+    .sort()
+    .reverse();
 }
 
-/** 下载指定日期的备份文件 */
-export async function downloadBackup(filename: string): Promise<void> {
+/** 下载指定日期的备份文件
+ * @returns 'shared' — 已打开系统分享面板；'download' — Web 下载已触发 */
+export async function downloadBackup(filename: string): Promise<'shared' | 'download'> {
   const root = await navigator.storage.getDirectory();
   const backupsDir = await root.getDirectoryHandle('backups');
   const handle = await backupsDir.getFileHandle(filename);
@@ -493,7 +654,7 @@ export async function downloadBackup(filename: string): Promise<void> {
 
   // 尝试原生分享
   const handled = await nativeSaveAndShare(bytes, filename);
-  if (handled) return;
+  if (handled) return 'shared';
 
   // Web 降级：转 base64 存 localStorage，供 export.html 下载
   let binary = '';
@@ -503,4 +664,5 @@ export async function downloadBackup(filename: string): Promise<void> {
   localStorage.setItem('jewelry_export_data', btoa(binary));
   localStorage.setItem('jewelry_export_filename', filename);
   window.open(new URL(import.meta.env.BASE_URL + 'export.html', window.location.href).href, '_blank');
+  return 'download';
 }

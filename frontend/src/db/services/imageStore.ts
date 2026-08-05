@@ -85,14 +85,14 @@ export async function checkSequenceConflicts(
     const prefix = `${categoryName}_`;
     const seqSet = new Set(sequences);
 
-    for await (const [name] of (imagesDir as unknown as AsyncIterable<[string, unknown]>)) {
-      if (typeof name === 'string' && name.startsWith(prefix)) {
+    await iterateDirectory(imagesDir, async (name) => {
+      if (name.startsWith(prefix)) {
         const rest = name.slice(prefix.length);
         const numStr = rest.split('.')[0];
         const n = parseInt(numStr, 10);
         if (seqSet.has(n)) conflicts.push(n);
       }
-    }
+    });
   } catch (err) {
     console.warn('checkSequenceConflicts failed:', err);
   }
@@ -125,15 +125,14 @@ export async function getCategoryNextSequence(
     }
 
     const prefix = `${categoryName}_`;
-    // FileSystemDirectoryHandle.entries() 返回 AsyncIterable<[string, FileSystemHandle]>
-    for await (const [name] of (imagesDir as unknown as AsyncIterable<[string, unknown]>)) {
-      if (typeof name === 'string' && name.startsWith(prefix)) {
+    await iterateDirectory(imagesDir, async (name) => {
+      if (name.startsWith(prefix)) {
         const rest = name.slice(prefix.length);
         const numStr = rest.split('.')[0];
         const n = parseInt(numStr, 10);
         if (!isNaN(n) && n > maxN) maxN = n;
       }
-    }
+    });
   } catch (err) {
     console.warn('getCategoryNextSequence: OPFS iteration failed, starting from 1:', err);
   }
@@ -199,6 +198,66 @@ export async function getImageBlobUrl(filename: string): Promise<string | null> 
 
 // ── 批量读取 ──────────────────────────────────────────────────────
 
+// ── 目录遍历辅助 ──────────────────────────────────────────────────
+
+/**
+ * 遍历 OPFS 目录，尝试多种迭代方式以兼容不同 WebView。
+ * 回调返回 false 可提前终止遍历。
+ * @returns true 表示遍历成功，false 表示所有方法均失败
+ */
+async function iterateDirectory(
+  dir: FileSystemDirectoryHandle,
+  onEntry: (name: string, handle: FileSystemHandle) => Promise<boolean | void>,
+): Promise<boolean> {
+  // 方法 1：.keys() + .getFileHandle() 组合
+  try {
+    const keys = (dir as any).keys?.();
+    if (keys) {
+      for await (const name of keys) {
+        if (typeof name !== 'string') continue;
+        let handle: FileSystemHandle;
+        try {
+          handle = await dir.getFileHandle(name);
+        } catch {
+          try { handle = await dir.getDirectoryHandle(name); } catch { continue; }
+        }
+        const result = await onEntry(name, handle);
+        if (result === false) return true;
+      }
+      return true;
+    }
+  } catch { /* try next */ }
+
+  // 方法 2：.entries() 获取 [name, handle] 对
+  try {
+    const entries = (dir as any).entries?.();
+    if (entries) {
+      for await (const [name, handle] of entries) {
+        if (typeof name !== 'string') continue;
+        const result = await onEntry(name, handle as FileSystemHandle);
+        if (result === false) return true;
+      }
+      return true;
+    }
+  } catch { /* try next */ }
+
+  // 方法 3：直接异步迭代句柄（桌面 Chrome 兼容）
+  try {
+    for await (const entry of dir as unknown as AsyncIterable<[string, FileSystemHandle]>) {
+      const name = Array.isArray(entry) ? entry[0] : undefined;
+      const handle = Array.isArray(entry) ? entry[1] : undefined;
+      if (typeof name !== 'string') continue;
+      const result = await onEntry(name, handle as FileSystemHandle);
+      if (result === false) return true;
+    }
+    return true;
+  } catch { /* fall through */ }
+
+  return false;
+}
+
+// ── 统计 ──────────────────────────────────────────────────────────
+
 /**
  * 统计 OPFS /images/ 目录下的图片数量（只遍历文件名，不读取文件内容）。
  */
@@ -212,9 +271,9 @@ export async function countImages(): Promise<number> {
       return 0;
     }
     let count = 0;
-    for await (const [name] of imagesDir as unknown as AsyncIterable<[string, unknown]>) {
-      if (typeof name === 'string') count++;
-    }
+    await iterateDirectory(imagesDir, async (_name) => {
+      count++;
+    });
     return count;
   } catch {
     return 0;
@@ -241,17 +300,16 @@ export async function forEachImage(
       return;
     }
 
-    for await (const [name, handle] of imagesDir as unknown as AsyncIterable<[string, FileSystemFileHandle]>) {
-      if (typeof name !== 'string') continue;
+    await iterateDirectory(imagesDir, async (name, handle) => {
+      if (!(handle instanceof FileSystemFileHandle)) return;
       try {
         const file = await handle.getFile();
         const buffer = await file.arrayBuffer();
-        const shouldContinue = await onImage(name, new Uint8Array(buffer));
-        if (shouldContinue === false) break;
+        return await onImage(name, new Uint8Array(buffer));
       } catch (err) {
         console.warn(`forEachImage: 跳过 ${name} —`, err);
       }
-    }
+    });
   } catch (err) {
     console.warn('forEachImage: OPFS 遍历失败 —', err);
   }
@@ -272,6 +330,36 @@ export async function readAllImages(): Promise<{ name: string; data: Uint8Array 
     result.push({ name, data });
   });
   return result;
+}
+
+// ── 列出文件名 ──────────────────────────────────────────────────────
+
+/**
+ * 列出 OPFS /images/ 目录下所有图片文件名（不读取文件内容）。
+ * 按名称排序，可用于图片浏览器。
+ */
+export async function listImageNames(): Promise<string[]> {
+  const names: string[] = [];
+  try {
+    const root = await navigator.storage.getDirectory();
+    let imagesDir: FileSystemDirectoryHandle;
+    try {
+      imagesDir = await root.getDirectoryHandle(IMAGES_DIR);
+    } catch {
+      return [];
+    }
+
+    const ok = await iterateDirectory(imagesDir, async (name) => {
+      names.push(name);
+    });
+    if (!ok) {
+      console.warn('listImageNames: 所有目录遍历方法均失败');
+    }
+    names.sort();
+  } catch (err) {
+    console.warn('listImageNames failed:', err);
+  }
+  return names;
 }
 
 // ── 删除 ──────────────────────────────────────────────────────────
