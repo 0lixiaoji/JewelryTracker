@@ -25,6 +25,18 @@ const CATEGORY_ICONS: Record<string, string> = {
   '盒子': '📦',
 };
 
+const CATEGORY_ACCENTS: Record<string, string> = {
+  '发圈': '#e890a0',
+  '发卡': '#e89850',
+  '耳环': '#50c8b8',
+  '项链': '#d4a848',
+  '手链': '#9888d8',
+  '戒指': '#6098d8',
+  '眼影': '#e88060',
+  '口红': '#e84858',
+  '盒子': '#68c068',
+};
+
 export default function Dashboard() {
   const { categories, loading, error, refresh } = useCategories();
   const { notify } = useNotification();
@@ -157,10 +169,13 @@ export default function Dashboard() {
 
       {/* 分类卡片 */}
       <div className="category-grid">
-        {categories.map((cat) => (
+        {categories.map((cat) => {
+          const accent = CATEGORY_ACCENTS[cat.name_zh] ?? CATEGORY_ACCENTS['盒子'];
+          return (
           <div
             key={cat.id}
             className="category-card"
+            style={{ '--card-accent': accent } as React.CSSProperties}
             onClick={() => navigate(`/categories/${cat.id}`)}
           >
             <div className="category-card-icon">
@@ -184,7 +199,8 @@ export default function Dashboard() {
               </button>
             )}
           </div>
-        ))}
+          );
+        })}
       </div>
 
       {/* 数据备份 */}
