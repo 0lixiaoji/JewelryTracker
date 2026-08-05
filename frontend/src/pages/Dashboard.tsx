@@ -207,12 +207,12 @@ export default function Dashboard() {
       <div style={{ marginTop: 32, padding: '16px 0', borderTop: '1px solid #3e3424' }}>
         <h3 style={{ fontSize: '0.95rem', marginBottom: 12, color: '#f0c060' }}>数据备份</h3>
         <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', alignItems: 'center' }}>
-          <button className="btn-sm" onClick={handleExport} disabled={exporting}>
+          <button className="btn-sm" style={{ paddingLeft: 6, paddingRight: 6 }} onClick={handleExport} disabled={exporting}>
             {exporting
               ? (exportProgress ? `⏳ ${exportProgress}` : '⏳ 打包中…')
               : '📥 导出备份'}
           </button>
-          <button className="btn-sm" onClick={handleShowBackups}>
+          <button className="btn-sm" style={{ paddingLeft: 6, paddingRight: 6 }} onClick={handleShowBackups}>
             📂 查看备份
           </button>
           <label className="btn-outline btn-sm" style={{ cursor: 'pointer' }}>
