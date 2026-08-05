@@ -10,7 +10,9 @@
 import initSqlJs, { type Database, type SqlJsStatic } from 'sql.js';
 import { INIT_SQL, MIGRATIONS } from './migration';
 import { nativeSaveAndShare } from '../capacitor/index';
-import { initImageStore } from './services/imageStore';
+import { initImageStore, forEachImage, countImages } from './services/imageStore';
+import { createZipWriter, getTempZipFile, removeTempZip } from './services/zipStream';
+import { chunkedNativeShare } from '../capacitor/chunkWriter';
 
 // ── OPFS 存储配置 ─────────────────────────────────────────────────
 
@@ -289,6 +291,95 @@ export async function exportDatabase(): Promise<string | null> {
 
   // 使用 URL 构造函数正确解析相对路径（兼容 Capacitor file:// 协议）
   return new URL(`${import.meta.env.BASE_URL}export.html`, window.location.href).href;
+}
+
+/**
+ * 导出数据库 + 全部图片为 zip 包（流式写入 OPFS，不爆内存）。
+ *
+ * 逐张读取图片 → 流式写入 OPFS /temp/ 中的 zip 文件，
+ * 任何时候内存中只保留当前处理的一张图片。
+ *
+ * 打包完成后直接用 OPFS 文件引用调起系统分享（navigator.share），
+ * 不将 zip 加载到 JS 内存，避免大文件 OOM。
+ *
+ * @param onProgress 进度回调 (current, total)，用于 UI 展示进度
+ * @returns 'shared' 表示已通过分享面板处理，'download' 表示 Web 下载已触发
+ */
+export async function exportDatabaseWithImages(
+  onProgress?: (current: number, total: number) => void,
+): Promise<'shared' | 'download'> {
+  const database = getDBSync();
+  const dbData = database.export();
+  const dbBytes = new Uint8Array(dbData);
+  const dbFilename = `jewelry-backup-${getLocalDateString()}.db`;
+  const zipFilename = `jewelry-fullbackup-${getLocalDateString()}.zip`;
+
+  // 统计总数（DB 1 个 + 图片 N 张）
+  const imageCount = await countImages();
+  const total = 1 + imageCount;
+
+  // 流式创建 zip
+  const writer = await createZipWriter(zipFilename);
+
+  try {
+    // 写入数据库文件
+    await writer.addFile(dbFilename, dbBytes);
+    onProgress?.(1, total);
+
+    // 逐张写入图片（每次只读一张，写入后释放）
+    let imgIndex = 1;
+    await forEachImage(async (name, data) => {
+      await writer.addFile('images/' + name, data);
+      imgIndex++;
+      onProgress?.(1 + imgIndex - 1, total);
+    });
+
+    // 写中央目录 + 关闭
+    await writer.finalize();
+  } catch (err) {
+    await writer.abort();
+    await removeTempZip(zipFilename);
+    throw err;
+  }
+
+  // ── 分享：优先用原生分片写入器（JS 内存只留 1MB）───────────────
+
+  const zipFile = await getTempZipFile(zipFilename);
+
+  // 方案 A：原生分片写入 + 系统分享面板（大文件安全，不爆内存）
+  const nativeHandled = await chunkedNativeShare(
+    zipFile,
+    zipFilename,
+    'application/zip',
+    '首饰管家 完整备份',
+  );
+  if (nativeHandled) {
+    await removeTempZip(zipFilename);
+    return 'shared';
+  }
+
+  // 方案 B：Capacitor 传统分享（需要加载完整文件到内存，适用于中等规模）
+  if ((window as any).Capacitor?.isNative) {
+    const buffer = await zipFile.arrayBuffer();
+    const zipBytes = new Uint8Array(buffer);
+    const handled = await nativeSaveAndShare(zipBytes, zipFilename);
+    await removeTempZip(zipFilename);
+    if (handled) return 'shared';
+  }
+
+  // 方案 C：Web Blob 下载
+  const blob = new Blob([await zipFile.arrayBuffer()], { type: 'application/zip' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = zipFilename;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+
+  await removeTempZip(zipFilename);
+  return 'download';
 }
 
 /** 导入数据库文件，替换当前数据库 */

@@ -197,6 +197,83 @@ export async function getImageBlobUrl(filename: string): Promise<string | null> 
   }
 }
 
+// ── 批量读取 ──────────────────────────────────────────────────────
+
+/**
+ * 统计 OPFS /images/ 目录下的图片数量（只遍历文件名，不读取文件内容）。
+ */
+export async function countImages(): Promise<number> {
+  try {
+    const root = await navigator.storage.getDirectory();
+    let imagesDir: FileSystemDirectoryHandle;
+    try {
+      imagesDir = await root.getDirectoryHandle(IMAGES_DIR);
+    } catch {
+      return 0;
+    }
+    let count = 0;
+    for await (const [name] of imagesDir as unknown as AsyncIterable<[string, unknown]>) {
+      if (typeof name === 'string') count++;
+    }
+    return count;
+  } catch {
+    return 0;
+  }
+}
+
+/**
+ * 逐个读取 OPFS /images/ 目录下的所有图片文件（原图，不做任何压缩）。
+ *
+ * 与 readAllImages 不同，此函数每读一张图片就调用一次 callback，
+ * 图片数据在 callback 返回后即可被 GC 回收，避免 252 张原图全部驻留内存导致 OOM。
+ *
+ * @param onImage 每张图片的回调，返回 false 可提前终止遍历
+ */
+export async function forEachImage(
+  onImage: (name: string, data: Uint8Array) => Promise<boolean | void>,
+): Promise<void> {
+  try {
+    const root = await navigator.storage.getDirectory();
+    let imagesDir: FileSystemDirectoryHandle;
+    try {
+      imagesDir = await root.getDirectoryHandle(IMAGES_DIR);
+    } catch {
+      return;
+    }
+
+    for await (const [name, handle] of imagesDir as unknown as AsyncIterable<[string, FileSystemFileHandle]>) {
+      if (typeof name !== 'string') continue;
+      try {
+        const file = await handle.getFile();
+        const buffer = await file.arrayBuffer();
+        const shouldContinue = await onImage(name, new Uint8Array(buffer));
+        if (shouldContinue === false) break;
+      } catch (err) {
+        console.warn(`forEachImage: 跳过 ${name} —`, err);
+      }
+    }
+  } catch (err) {
+    console.warn('forEachImage: OPFS 遍历失败 —', err);
+  }
+}
+
+/**
+ * 读取 OPFS /images/ 目录下的所有图片文件（原图，不做任何压缩）。
+ *
+ * ⚠️ 注意：此函数会将所有图片同时加载到内存中。
+ * 图片数量多时（>50 张原图）可能触发移动端 OOM。
+ * 大量图片导出请使用 forEachImage() 流式处理。
+ *
+ * @returns {name: 文件名, data: 原始二进制} 数组，目录不存在时返回空数组
+ */
+export async function readAllImages(): Promise<{ name: string; data: Uint8Array }[]> {
+  const result: { name: string; data: Uint8Array }[] = [];
+  await forEachImage(async (name, data) => {
+    result.push({ name, data });
+  });
+  return result;
+}
+
 // ── 删除 ──────────────────────────────────────────────────────────
 
 /**

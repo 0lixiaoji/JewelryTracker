@@ -5,7 +5,7 @@ import ConfirmDialog from '../components/ConfirmDialog';
 import LoadingSpinner from '../components/LoadingSpinner';
 import { useCategories } from '../contexts/CategoryContext';
 import { useNotification } from '../contexts/NotificationContext';
-import { downloadBackup, exportDatabase, importDatabase, listBackups } from '../db/database';
+import { downloadBackup, exportDatabase, exportDatabaseWithImages, importDatabase, listBackups } from '../db/database';
 
 
 const CATEGORY_ICONS: Record<string, string> = {
@@ -29,6 +29,8 @@ export default function Dashboard() {
   const [importing, setImporting] = useState(false);
   const [exportUrl, setExportUrl] = useState('');
   const [exporting, setExporting] = useState(false);
+  const [exportingFull, setExportingFull] = useState(false);
+  const [exportFullProgress, setExportFullProgress] = useState('');
   const [showBackups, setShowBackups] = useState(false);
   const [backupList, setBackupList] = useState<string[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -80,6 +82,27 @@ export default function Dashboard() {
       notify(e instanceof Error ? e.message : '导出失败', 'error');
     } finally {
       setExporting(false);
+    }
+  };
+
+  const handleExportFull = async () => {
+    setExportingFull(true);
+    setExportFullProgress('准备中…');
+    try {
+      const result = await exportDatabaseWithImages((current, total) => {
+        setExportFullProgress(`${current}/${total}`);
+      });
+      setExportFullProgress('');
+      if (result === 'shared') {
+        notify('请在分享面板中选择「保存到文件」或发送到微信等', 'success');
+      } else {
+        notify('浏览器下载已开始，请查看下载列表', 'success');
+      }
+    } catch (e) {
+      setExportFullProgress('');
+      notify(e instanceof Error ? e.message : '导出失败', 'error');
+    } finally {
+      setExportingFull(false);
     }
   };
 
@@ -173,6 +196,9 @@ export default function Dashboard() {
         <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
           <button className="btn-outline btn-sm" onClick={handleExport} disabled={exporting}>
             {exporting ? '⏳ 导出中…' : '📥 导出数据库'}
+          </button>
+          <button className="btn-outline btn-sm" onClick={handleExportFull} disabled={exportingFull}>
+            {exportingFull ? (exportFullProgress ? `⏳ 打包中 ${exportFullProgress}` : '⏳ 打包中…') : '📦 导出数据库+图片'}
           </button>
           <button className="btn-outline btn-sm" onClick={handleShowBackups}>
             📂 查看备份
