@@ -5,7 +5,6 @@ import {
   getTableColumns,
   getTableRowCount,
   queryTableData,
-  getImageBlobUrl,
 } from '../db/database';
 
 const ROWS_PER_PAGE = 30;
@@ -37,9 +36,6 @@ export default function DataBrowser() {
   const [loading, setLoading] = useState(true);
   const [tableLoading, setTableLoading] = useState(false);
 
-  // 图片 blob URL 缓存（items 表用）
-  const [imageUrls, setImageUrls] = useState<Record<string, string>>({});
-
   // 加载表列表
   useEffect(() => {
     try {
@@ -70,13 +66,6 @@ export default function DataBrowser() {
         setTotalRows(count);
         const data = queryTableData(tableName, pageNum * ROWS_PER_PAGE, ROWS_PER_PAGE);
         setRows(data);
-
-        // items 表：异步加载图片缩略图
-        if (tableName === 'items') {
-          loadItemThumbnails(data);
-        } else {
-          setImageUrls({});
-        }
       } catch (e) {
         console.error('加载表数据失败:', e);
       } finally {
@@ -86,46 +75,7 @@ export default function DataBrowser() {
     [],
   );
 
-  // 加载 items 表的缩略图
-  const loadItemThumbnails = useCallback(async (items: Record<string, unknown>[]) => {
-    const urls: Record<string, string> = {};
-    for (const item of items) {
-      const imagePath = item['image_path'];
-      if (typeof imagePath === 'string' && imagePath) {
-        // base64 图片直接使用
-        if (imagePath.startsWith('data:')) {
-          urls[imagePath] = imagePath;
-        } else {
-          // OPFS 文件名，获取 blob URL
-          try {
-            const url = await getImageBlobUrl(imagePath);
-            if (url) urls[imagePath] = url;
-          } catch { /* skip */ }
-        }
-      }
-    }
-    setImageUrls(urls);
-  }, []);
-
   const totalPages = Math.max(1, Math.ceil(totalRows / ROWS_PER_PAGE));
-
-  // items 表的图片列渲染
-  const renderCell = (colName: string, value: unknown) => {
-    if (selectedTable === 'items' && colName === 'image_path') {
-      const path = typeof value === 'string' ? value : '';
-      if (!path) return <span style={{ color: '#6e6250' }}>—</span>;
-      const url = imageUrls[path];
-      if (!url) return <span style={{ color: '#8ec8b8' }}>加载中…</span>;
-      return (
-        <img
-          src={url}
-          alt=""
-          style={{ width: 48, height: 48, objectFit: 'contain', borderRadius: 4, background: '#423825' }}
-        />
-      );
-    }
-    return formatCell(value);
-  };
 
   if (loading) return <LoadingSpinner />;
 
@@ -152,12 +102,7 @@ export default function DataBrowser() {
 
         {/* 右侧数据视图 */}
         <div className="dbrowser-content">
-          {!selectedTable ? (
-            <div className="empty-state">
-              <span className="empty-icon">📊</span>
-              <p>选择左侧的表查看数据</p>
-            </div>
-          ) : tableLoading ? (
+          {!selectedTable ? null : tableLoading ? (
             <LoadingSpinner />
           ) : (
             <>
@@ -197,7 +142,7 @@ export default function DataBrowser() {
                           <td className="dbrowser-row-num">{page * ROWS_PER_PAGE + i + 1}</td>
                           {columns.map((col) => (
                             <td key={col.cid} className="dbrowser-cell">
-                              {renderCell(col.name, row[col.name])}
+                              {formatCell(row[col.name])}
                             </td>
                           ))}
                         </tr>

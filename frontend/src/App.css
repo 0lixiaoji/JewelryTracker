@@ -14,7 +14,7 @@ body {
   background-size: cover;
   background-position: center;
   background-attachment: fixed;
-  color: #ff0066;
+  color: #e8dcc8;
   line-height: 1.6;
 }
 
@@ -51,6 +51,7 @@ body {
   padding: 4px 8px;
   border-radius: 4px;
   transition: background 0.15s;
+  white-space: nowrap;
 }
 
 .app-header nav a:active {
@@ -176,14 +177,14 @@ button {
   padding: 8px 20px;
   border: none;
   border-radius: 6px;
-  background: #ff0066;
-  color: #fff;
+  background: #c78a3c;
+  color: #fff8ec;
   font-size: 0.95rem;
   font-weight: 600;
 }
 
-button:hover { background: #ff3385; }
-button:disabled { background: #6e6250; cursor: not-allowed; }
+button:hover { background: #b87a2e; }
+button:disabled { background: #524432; color: #9e8e7a; cursor: not-allowed; }
 
 /* ── Daily Wear Picker ────────────────────────────────── */
 .wear-category {
@@ -215,8 +216,8 @@ button:disabled { background: #6e6250; cursor: not-allowed; }
 }
 
 .picker-item.selected {
-  border-color: #ff0066;
-  background: #3a1a28;
+  border-color: #d4a048;
+  background: #3a2e18;
 }
 
 .picker-item input {
@@ -235,7 +236,7 @@ button:disabled { background: #6e6250; cursor: not-allowed; }
 
 .picker-item.none {
   font-size: 0.8rem;
-  color: #ff0066;
+  color: #d4a048;
   padding: 6px 10px;
   justify-content: center;
   min-height: 80px;
@@ -303,6 +304,7 @@ button:disabled { background: #6e6250; cursor: not-allowed; }
   justify-content: space-between;
   gap: 8px;
   padding: 12px 16px;
+  color: #2c2416;
   border-radius: 8px;
   color: #2c2416;
   font-size: 0.9rem;
@@ -324,7 +326,7 @@ button:disabled { background: #6e6250; cursor: not-allowed; }
 
 .toast-success { background: #7db87d; }
 .toast-error   { background: #e08878; }
-.toast-info    { background: #ff0066; }
+.toast-info    { background: #d4a048; }
 
 .toast button {
   background: transparent;
@@ -344,7 +346,7 @@ button:disabled { background: #6e6250; cursor: not-allowed; }
 .spinner {
   width: 32px; height: 32px;
   border: 3px solid #483c2a;
-  border-top-color: #ff0066;
+  border-top-color: #d4a048;
   border-radius: 50%;
   animation: spin 0.6s linear infinite;
   margin: 0 auto 8px;
@@ -403,7 +405,7 @@ button:disabled { background: #6e6250; cursor: not-allowed; }
   box-shadow: 0 8px 30px rgba(0,0,0,.6);
 }
 .modal h3 { margin-bottom: 8px; }
-.modal p { color: #ff0066; margin-bottom: 20px; }
+.modal p { color: #d4a048; margin-bottom: 20px; }
 .modal-actions { display: flex; gap: 12px; justify-content: flex-end; }
 
 /* ── Image Cropper Modal ────────────────────────────────── */
@@ -457,7 +459,7 @@ button:disabled { background: #6e6250; cursor: not-allowed; }
 }
 .crop-controls input[type="range"] {
   width: 120px;
-  accent-color: #ff0066;
+  accent-color: #d4a048;
 }
 
 /* cropperjs 移动端触控优化：四个角都放大到 20x20，配合 ::before 扩展触摸区 */
@@ -481,10 +483,10 @@ button:disabled { background: #6e6250; cursor: not-allowed; }
 
 /* ── Button Variants ──────────────────────────────────── */
 .btn-outline {
-  background: transparent; color: #ff0066;
-  border: 1px solid #ff0066;
+  background: transparent; color: #7dab8e;
+  border: 1px solid #7dab8e;
 }
-.btn-outline:hover { background: #3a1a28; }
+.btn-outline:hover { background: #2a2e22; color: #8ec898; }
 
 .btn-danger { background: #e08878; color: #2c2416; font-weight: 600; }
 .btn-danger:hover { background: #c87060; }
@@ -492,7 +494,7 @@ button:disabled { background: #6e6250; cursor: not-allowed; }
 .btn-sm { padding: 4px 12px; font-size: 0.8rem; }
 
 .btn-icon {
-  background: transparent; color: #ff0066;
+  background: transparent; color: #7dab8e;
   padding: 2px 6px; font-size: 1rem; line-height: 1;
 }
 .btn-icon:hover { background: #403525; color: #e08878; }
@@ -504,7 +506,7 @@ button:disabled { background: #6e6250; cursor: not-allowed; }
 }
 .page-header h2 { flex: 1; }
 .page-header .btn-back {
-  background: transparent; color: #ff0066;
+  background: transparent; color: #7dab8e;
   font-size: 0.9rem; padding: 4px 0;
 }
 
@@ -516,7 +518,7 @@ button:disabled { background: #6e6250; cursor: not-allowed; }
 }
 .item-card:hover .item-actions { opacity: 1; }
 .item-card .item-actions button {
-  background: rgba(58,48,32,.95); color: #ff0066;
+  background: rgba(58,48,32,.95); color: #d4a048;
   font-size: 0.7rem; padding: 2px 8px;
   border-radius: 4px; cursor: pointer;
 }
@@ -546,7 +548,7 @@ button:disabled { background: #6e6250; cursor: not-allowed; }
   cursor: pointer;
   transition: border-color 0.2s, background 0.2s;
 }
-.dropzone:hover { border-color: #ff0066; background: #32291a; }
+.dropzone:hover { border-color: #d4a048; background: #32291a; }
 .dropzone.has-file { border-style: solid; border-color: #7db87d; }
 .dropzone-icon { font-size: 2rem; display: block; margin-bottom: 8px; }
 .dropzone p { color: #8ec8b8; font-size: 0.9rem; }
@@ -560,7 +562,7 @@ button:disabled { background: #6e6250; cursor: not-allowed; }
 .stat-item {
   display: flex; flex-direction: column; align-items: center;
 }
-.stat-value { font-size: 1.5rem; font-weight: 700; color: #ff0066; }
+.stat-value { font-size: 1.5rem; font-weight: 700; color: #d4a048; }
 .stat-label { font-size: 0.8rem; color: #8ec8b8; }
 
 /* ── Today Badge ──────────────────────────────────────── */
@@ -585,6 +587,15 @@ button:disabled { background: #6e6250; cursor: not-allowed; }
   margin-top: 24px;
 }
 .submit-bar .selected-count { color: #8ec8b8; font-size: 0.9rem; }
+
+.submit-bar button {
+  background: #c78a3c;
+  color: #fff8ec;
+}
+.submit-bar button:disabled {
+  background: #524432;
+  color: #9e8e7a;
+}
 
 /* ── Wider Image Picker ───────────────────────────────── */
 .picker-item img {
@@ -641,7 +652,7 @@ button:disabled { background: #6e6250; cursor: not-allowed; }
   bottom: 6px;
   right: 8px;
   background: rgba(0,0,0,.5);
-  color: #ff0066;
+  color: #d4a048;
   font-size: 0.7rem;
   padding: 2px 8px;
   border-radius: 10px;
@@ -656,7 +667,7 @@ button:disabled { background: #6e6250; cursor: not-allowed; }
   align-items: center;
   justify-content: center;
   font-size: 0.8rem;
-  color: #ff0066;
+  color: #d4a048;
   border-radius: 8px;
   margin-bottom: 12px;
 }
@@ -672,30 +683,30 @@ button:disabled { background: #6e6250; cursor: not-allowed; }
 /* ── Composite Cell Overlay ─────────────────────────── */
 .composite-cell-overlay {
   position: absolute;
-  border: 3px solid #ff0066;
+  border: 3px solid #7dab8e;
   border-radius: 4px;
-  background: rgba(255, 0, 102, 0.18);
+  background: rgba(125, 171, 142, 0.18);
   pointer-events: none;
   z-index: 1;
-  box-shadow: 0 0 0 2px rgba(255, 0, 102, 0.3);
+  box-shadow: 0 0 0 2px rgba(125, 171, 142, 0.3);
 }
 
 /* ── Clear Selection Button ─────────────────────────── */
 .btn-clear-selection {
   display: inline-block;
   background: transparent;
-  color: #ff0066;
+  color: #7dab8e;
   font-size: 0.75rem;
   padding: 2px 10px;
-  border: 1px solid #483c2a;
+  border: 1px solid #7dab8e;
   border-radius: 10px;
   cursor: pointer;
   margin-bottom: 8px;
 }
 .btn-clear-selection:hover {
-  color: #e08878;
-  border-color: #e08878;
-  background: #301e1a;
+  color: #d4846e;
+  border-color: #d4846e;
+  background: #2a1c1a;
 }
 
 /* ── Fullscreen Viewer ────────────────────────────────── */
@@ -757,8 +768,8 @@ button:disabled { background: #6e6250; cursor: not-allowed; }
 
 /* ── Batch Dropzone ────────────────────────────────────── */
 .dropzone-active {
-  border-color: #ff0066;
-  background: #3a1a28;
+  border-color: #d4a048;
+  background: #3a2e18;
 }
 
 .dropzone-compact {
@@ -815,7 +826,7 @@ button:disabled { background: #6e6250; cursor: not-allowed; }
   opacity: 1;
 }
 .batch-preview-card .batch-preview-actions button {
-  background: rgba(224, 136, 120, 0.9);
+  background: rgba(125, 171, 142, 0.9);
   color: #2c2416;
   font-size: 0.7rem;
   padding: 2px 6px;
@@ -825,7 +836,7 @@ button:disabled { background: #6e6250; cursor: not-allowed; }
   line-height: 1;
 }
 .batch-preview-card .batch-preview-actions button:hover {
-  background: #e08878;
+  background: #6a9e7d;
 }
 .batch-preview-name {
   padding: 4px 6px;
@@ -849,7 +860,7 @@ button:disabled { background: #6e6250; cursor: not-allowed; }
   display: flex;
   align-items: center;
   justify-content: center;
-  background: rgba(255, 0, 102, 0.85);
+  background: rgba(212, 160, 72, 0.85);
   color: #2c2416;
   font-size: 1.2rem;
   font-weight: 700;
@@ -862,7 +873,16 @@ button:disabled { background: #6e6250; cursor: not-allowed; }
 /* ── Responsive ───────────────────────────────────────── */
 @media (max-width: 640px) {
   .app-header { flex-direction: column; gap: 8px; }
-  .app-header nav { flex-wrap: wrap; justify-content: center; }
+  .app-header nav {
+    flex-wrap: nowrap;
+    justify-content: space-between;
+    gap: 1px;
+    width: 100%;
+  }
+  .app-header nav a {
+    font-size: 0.95rem;
+    padding: 4px 2px;
+  }
   .category-grid { grid-template-columns: repeat(3, 1fr); }
   .item-grid { grid-template-columns: repeat(3, 1fr); }
   .picker-item img { width: 56px; height: 56px; }
@@ -1045,7 +1065,7 @@ button:disabled { background: #6e6250; cursor: not-allowed; }
   background: #32291a !important;
 }
 .export-option input[type="radio"] {
-  accent-color: #ff0066;
+  accent-color: #d4a048;
 }
 
 /* ── Modal tweaks ──────────────────────────────────────── */
