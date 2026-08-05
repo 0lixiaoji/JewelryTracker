@@ -105,6 +105,14 @@ export default function DataBrowser() {
         setTotalRows(count);
         const data = queryTableData(tableName, pageNum * ROWS_PER_PAGE, ROWS_PER_PAGE);
         setRows(data);
+
+        // items 表：预暖图片缓存，ImageCell 渲染时直接命中
+        if (tableName === 'items') {
+          for (const row of data) {
+            const p = row['image_path'];
+            if (typeof p === 'string' && p) getImageBlobUrl(p);
+          }
+        }
       } catch (e) {
         console.error('加载表数据失败:', e);
       } finally {
