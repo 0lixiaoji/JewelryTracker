@@ -6,6 +6,7 @@ import {
   getTableRowCount,
   queryTableData,
 } from '../db/database';
+import { getImageBlobUrl, isBase64 } from '../db/services/imageStore';
 
 const ROWS_PER_PAGE = 30;
 
@@ -23,6 +24,44 @@ function formatCell(value: unknown): string {
   if (value === undefined) return '';
   if (value instanceof Uint8Array) return `[BLOB ${value.length} bytes]`;
   return String(value);
+}
+
+/** image_path 列的缩略图单元格 — 异步从 OPFS 加载图片显示 */
+function ImageCell({ path }: { path: string }) {
+  const [url, setUrl] = useState<string | null>(null);
+  const [failed, setFailed] = useState(false);
+
+  useEffect(() => {
+    if (isBase64(path)) {
+      setUrl(path);
+      return;
+    }
+    const opfsPath = path.includes('?') ? path.split('?')[0] : path;
+    let cancelled = false;
+    getImageBlobUrl(opfsPath).then((u) => {
+      if (!cancelled && u) setUrl(u);
+      else if (!cancelled) setFailed(true);
+    }).catch(() => {
+      if (!cancelled) setFailed(true);
+    });
+    return () => { cancelled = true; };
+  }, [path]);
+
+  if (failed) return <span style={{ color: '#6e6250', fontSize: '0.8rem' }}>🖼️ 加载失败</span>;
+  if (!url) return <span style={{ color: '#6e6250' }}>加载中…</span>;
+  return (
+    <img
+      src={url}
+      alt={path}
+      style={{
+        width: 48,
+        height: 48,
+        objectFit: 'cover',
+        borderRadius: 4,
+        display: 'block',
+      }}
+    />
+  );
 }
 
 export default function DataBrowser() {
@@ -142,7 +181,10 @@ export default function DataBrowser() {
                           <td className="dbrowser-row-num">{page * ROWS_PER_PAGE + i + 1}</td>
                           {columns.map((col) => (
                             <td key={col.cid} className="dbrowser-cell">
-                              {formatCell(row[col.name])}
+                              {col.name === 'image_path' && row[col.name] && typeof row[col.name] === 'string'
+                                ? <ImageCell path={row[col.name] as string} />
+                                : formatCell(row[col.name])
+                              }
                             </td>
                           ))}
                         </tr>
