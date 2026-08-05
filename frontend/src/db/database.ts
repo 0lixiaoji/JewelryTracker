@@ -143,7 +143,7 @@ export async function initDatabase(): Promise<Database> {
       const wasmRes = await fetch('/sql-wasm-browser.wasm');
       if (!wasmRes.ok) throw new Error(`WASM fetch failed: ${wasmRes.status}`);
       const wasmBinary = new Uint8Array(await wasmRes.arrayBuffer());
-      SQL = await initSqlJs({ wasmBinary });
+      SQL = await initSqlJs({ wasmBinary } as any);
       clearTimeout(timeoutId);
       console.log('[initDB] 步骤 1/5: sql.js WASM 加载完成 ✓');
     } catch (err) {
