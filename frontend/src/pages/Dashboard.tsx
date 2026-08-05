@@ -198,7 +198,7 @@ export default function Dashboard() {
               : '📥 导出备份'}
           </button>
           <button className="btn-sm" onClick={handleShowBackups}>
-            📂 管理备份
+            📂 查看备份
           </button>
           <label className="btn-outline btn-sm" style={{ cursor: 'pointer' }}>
             {importing ? '⏳ 导入中…' : '📤 导入备份'}
@@ -210,12 +210,9 @@ export default function Dashboard() {
               hidden
             />
           </label>
-          <button className="btn-outline btn-sm" onClick={() => navigate('/data-browser')}>
-            📊 浏览数据
-          </button>
         </div>
         <p style={{ fontSize: '0.75rem', color: '#8ec8b8', marginTop: 8 }}>
-          每天自动备份（含图片），保留最近 5 天 · 上次：
+          每日自动备份，保留近 5 天 · 上次：
           {localStorage.getItem('jewelry_last_backup_date') || '暂无'}
         </p>
         <p style={{ fontSize: '0.7rem', color: '#6e6250', marginTop: 4 }}>
@@ -227,20 +224,7 @@ export default function Dashboard() {
       {showBackups && (
         <div className="modal-overlay" onClick={() => setShowBackups(false)}>
           <div className="modal" onClick={(e) => e.stopPropagation()} style={{ maxWidth: 440 }}>
-            <h3>📂 数据管理</h3>
-
-            {/* 快捷操作 */}
-            <div style={{ marginBottom: 16 }}>
-              <button
-                className="btn-outline btn-sm"
-                style={{ width: '100%' }}
-                onClick={() => { setShowBackups(false); navigate('/data-browser'); }}
-              >
-                📊 浏览数据（含图片）
-              </button>
-            </div>
-
-            <h4 style={{ fontSize: '0.85rem', color: '#8ec8b8', marginBottom: 8, borderTop: '1px solid #3e3424', paddingTop: 12 }}>
+            <h4 style={{ fontSize: '0.85rem', color: '#8ec8b8', marginBottom: 8 }}>
               自动备份 ({backupList.length})
             </h4>
 
