@@ -103,11 +103,11 @@ h2 { color: #f0c060; }
   align-items: center;
   gap: 6px;
   position: relative;
-  box-shadow: inset 0 0 18px color-mix(in srgb, var(--card-accent, #d4a048) 80%, transparent),
+  box-shadow: inset 0 0 14px var(--card-accent, #d4a048),
               inset 0 2px 8px rgba(0,0,0,.6),
               0 2px 8px rgba(0,0,0,1),
-              0 0 18px color-mix(in srgb, var(--card-accent, #d4a048) 90%, transparent),
-              0 0 40px color-mix(in srgb, var(--card-accent, #d4a048) 70%, transparent);
+              0 0 14px var(--card-accent, #d4a048),
+              0 0 32px var(--card-accent, #d4a048);
 }
 
 .category-card:active {
@@ -115,11 +115,11 @@ h2 { color: #f0c060; }
 }
 
 .category-card:hover {
-  box-shadow: inset 0 0 28px color-mix(in srgb, var(--card-accent, #d4a048) 90%, transparent),
+  box-shadow: inset 0 0 22px var(--card-accent, #d4a048),
               inset 0 4px 16px rgba(0,0,0,.75),
               0 4px 16px rgba(0,0,0,1),
-              0 0 28px color-mix(in srgb, var(--card-accent, #d4a048) 95%, transparent),
-              0 0 60px color-mix(in srgb, var(--card-accent, #d4a048) 80%, transparent);
+              0 0 22px var(--card-accent, #d4a048),
+              0 0 48px var(--card-accent, #d4a048);
 }
 
 .category-card-icon {
@@ -164,9 +164,9 @@ h2 { color: #f0c060; }
 
 .category-card-action {
   margin-top: 6px;
-  background: color-mix(in srgb, var(--card-accent, #d4a048) 12%, transparent);
+  background: rgba(255, 255, 255, 0.06);
   color: var(--card-accent, #d4a048);
-  border: 1px solid color-mix(in srgb, var(--card-accent, #d4a048) 30%, transparent);
+  border: 1px solid var(--card-accent, #d4a048);
   border-radius: 20px;
   padding: 4px 18px;
   font-size: 0.75rem;
@@ -177,8 +177,8 @@ h2 { color: #f0c060; }
 }
 
 .category-card-action:hover {
-  background: color-mix(in srgb, var(--card-accent, #d4a048) 22%, transparent);
-  border-color: color-mix(in srgb, var(--card-accent, #d4a048) 50%, transparent);
+  background: rgba(255, 255, 255, 0.12);
+  border-color: var(--card-accent, #d4a048);
 }
 
 .category-card-action:disabled {
