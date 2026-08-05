@@ -60,7 +60,7 @@ body {
 
 .app-header nav a.active {
   color: #f0c060;
-  background: #3e2e18;
+  background: #2c2416;
   font-weight: 600;
 }
 
@@ -302,7 +302,7 @@ button:disabled { background: #524432; color: #9e8e7a; cursor: not-allowed; }
 
 .picker-item.selected {
   border-color: #d4a048;
-  background: #3a2e18;
+  background: #2c2416;
 }
 
 .picker-item input {
@@ -1006,7 +1006,7 @@ button:disabled { background: #524432; color: #9e8e7a; cursor: not-allowed; }
 }
 .dbrowser-table-btn:hover { background: #3a2e18; }
 .dbrowser-table-btn.active {
-  background: #3e2e18;
+  background: #2c2416;
   border-color: #f0c060;
 }
 
