@@ -678,8 +678,8 @@ button:disabled { background: #2c2416; color: #e8dcc8; cursor: not-allowed; }
   color: #2c2416;
 }
 .submit-bar button:disabled {
-  background: #524432;
-  color: #9e8e7a;
+  background: #806a3e;
+  color: #e8dcc8;
 }
 
 /* ── Wider Image Picker ───────────────────────────────── */
