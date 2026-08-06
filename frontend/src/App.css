@@ -359,7 +359,7 @@ button:disabled { background: #2c2416; color: #e8dcc8; cursor: not-allowed; }
   height: 60px;
   object-fit: contain;
   border-radius: 4px;
-  background: #423825;
+  background: transparent;
 }
 
 /* ── Pagination ───────────────────────────────────────── */
@@ -460,6 +460,15 @@ button:disabled { background: #2c2416; color: #e8dcc8; cursor: not-allowed; }
   justify-content: center;
   font-size: 1.5rem;
   color: #8ec8b8;
+}
+
+/* 历史记录中的占位图也保持透明，与每日佩戴一致 */
+.history-item .img-fallback {
+  background: transparent;
+}
+
+.history-item .img-loading {
+  background: transparent;
 }
 
 /* 图片从 OPFS 加载时的短暂占位 */
