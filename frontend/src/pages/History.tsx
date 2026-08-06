@@ -106,7 +106,7 @@ export default function History() {
                         bottom: 0,
                         left: 0,
                         right: 0,
-                        background: 'rgba(0, 0, 0, 0.45)',
+                        background: 'rgba(142, 200, 184, 0.45)',
                         color: '#ff0066',
                         fontSize: '0.6rem',
                         padding: '2px 0',

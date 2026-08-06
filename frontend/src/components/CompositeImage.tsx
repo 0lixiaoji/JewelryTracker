@@ -137,7 +137,7 @@ export default function CompositeImage({
             // 名称条 → 顶部
             if (displayName) {
               const nameBarH = Math.max(18, h * 0.14);
-              ctx.fillStyle = 'rgba(0, 0, 0, 0.45)';
+              ctx.fillStyle = 'rgba(142, 200, 184, 0.45)';
               ctx.fillRect(x, y, w, nameBarH);
               ctx.fillStyle = '#ff0066';
               ctx.font = `${Math.max(11, nameBarH * 0.55)}px sans-serif`;
@@ -159,7 +159,7 @@ export default function CompositeImage({
             // 未佩戴：名称条 → 底部
             if (displayName) {
               const nameBarH = Math.max(18, h * 0.14);
-              ctx.fillStyle = 'rgba(0, 0, 0, 0.45)';
+              ctx.fillStyle = 'rgba(142, 200, 184, 0.45)';
               ctx.fillRect(x, y + h - nameBarH, w, nameBarH);
               ctx.fillStyle = '#ff0066';
               ctx.font = `${Math.max(11, nameBarH * 0.55)}px sans-serif`;
