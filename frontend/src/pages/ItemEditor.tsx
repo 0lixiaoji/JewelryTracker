@@ -3,6 +3,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { createItemsBatch } from '../api/client';
 import { isNative, pickFromGallery, takePhoto } from '../capacitor';
 import ImageCropper from '../components/ImageCropper';
+import DropdownSelect from '../components/DropdownSelect';
 import { useCategories } from '../contexts/CategoryContext';
 import { useNotification } from '../contexts/NotificationContext';
 
@@ -268,34 +269,26 @@ export default function ItemEditor() {
         )}
 
         {/* ── 选择分类 ── */}
-        <label style={{ fontWeight: 600 }}>
+        <label style={{ fontWeight: 600, display: 'flex', flexDirection: 'column', gap: 4 }}>
           选择分类
-          <select
+          <DropdownSelect
             value={categoryId}
-            onChange={(e) => setCategoryId(Number(e.target.value))}
-            style={{ marginTop: 6 }}
-          >
-            <option value="">-- 请选择 --</option>
-            {categories.map((c) => (
-              <option key={c.id} value={c.id}>{c.name_zh}</option>
-            ))}
-          </select>
+            onChange={(v) => setCategoryId(Number(v))}
+            options={categories.map((c) => ({ value: c.id, label: c.name_zh }))}
+            placeholder="-- 请选择 --"
+          />
         </label>
 
         {/* ── 细分类型（手链 / 耳环等需要细分的分类） ── */}
         {subtypeConfig && (
-          <label style={{ fontWeight: 600 }}>
+          <label style={{ fontWeight: 600, display: 'flex', flexDirection: 'column', gap: 4 }}>
             细分类型
-            <select
+            <DropdownSelect
               value={subtypeName}
-              onChange={(e) => setSubtypeName(e.target.value)}
-              style={{ marginTop: 6 }}
-            >
-              <option value="">-- 请选择 --</option>
-              {subtypeConfig.options.map((opt) => (
-                <option key={opt} value={opt}>{opt}</option>
-              ))}
-            </select>
+              onChange={(v) => setSubtypeName(String(v))}
+              options={subtypeConfig.options.map((opt) => ({ value: opt, label: opt }))}
+              placeholder="-- 请选择 --"
+            />
           </label>
         )}
 
@@ -306,13 +299,20 @@ export default function ItemEditor() {
             （可选，留空自动分配）
           </span>
           <input
+            className="purple-input"
             type="number"
             min="1"
             step="1"
             value={customStartSeq}
             onChange={(e) => setCustomStartSeq(e.target.value)}
             placeholder="自动分配"
-            style={{ marginTop: 6 }}
+            style={{
+              marginTop: 6,
+              background: 'rgba(232, 144, 160, 0.12)',
+              border: '1px solid #e890a0',
+              borderRadius: 8,
+              boxShadow: 'inset 0 0 10px rgba(232,144,160,0.35), inset 0 2px 6px rgba(0,0,0,0.6), 0 2px 6px rgba(0,0,0,1), 0 0 10px rgba(232,144,160,0.35), 0 0 20px rgba(232,144,160,0.2)',
+            }}
           />
         </label>
 

@@ -669,6 +669,11 @@ button:disabled { background: #2c2416; color: #e8dcc8; cursor: not-allowed; }
 .dropzone p { color: #8ec8b8; font-size: 0.9rem; }
 .dropzone input[type="file"] { display: none; }
 
+.purple-input::placeholder {
+  color: #8ec8b8;
+  opacity: 1;
+}
+
 /* ── Stat Bar ─────────────────────────────────────────── */
 .stat-bar {
   display: flex; gap: 24px;
