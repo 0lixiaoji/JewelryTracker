@@ -7,6 +7,18 @@ import { useCategories } from '../contexts/CategoryContext';
 import { getDisplayName } from '../db/services/imageStore';
 import type { WearRecord } from '../api/types';
 
+const DAY_ACCENTS = [
+  '#e89850', // 发卡
+  '#e890a0', // 发圈
+  '#e88060', // 眼影
+  '#50c8b8', // 耳环
+  '#e84858', // 口红
+  '#d4a848', // 项链
+  '#9888d8', // 手链
+  '#6098d8', // 戒指
+  '#68c068', // 盒子
+];
+
 /** 将 YYYY-MM-DD 转为友好的相对日期 */
 function friendlyDate(dateStr: string): string {
   const d = new Date(dateStr);
@@ -67,8 +79,12 @@ export default function History() {
         <EmptyState message="还没有佩戴记录" icon="📅" />
       ) : (
         <>
-          {records.map((rec) => (
-            <div key={rec.id} className="history-day">
+          {records.map((rec, i) => (
+            <div
+              key={rec.id}
+              className="history-day"
+              style={{ '--card-accent': DAY_ACCENTS[i % DAY_ACCENTS.length] } as React.CSSProperties}
+            >
               <h3>
                 {friendlyDate(rec.worn_at)}
                 <span style={{ fontSize: '0.8rem', color: '#8ec8b8', marginLeft: 12 }}>
