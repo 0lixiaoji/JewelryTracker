@@ -54,12 +54,14 @@ function ImageCell({ path }: { path: string }) {
     <img
       src={url}
       alt={path}
+      title={path}
       style={{
-        width: 48,
-        height: 48,
-        objectFit: 'cover',
+        width: 60,
+        height: 60,
+        objectFit: 'contain',
         borderRadius: 4,
         display: 'block',
+        background: 'transparent',
       }}
     />
   );
