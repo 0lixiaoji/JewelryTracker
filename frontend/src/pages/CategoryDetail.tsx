@@ -8,6 +8,7 @@ import LoadingSpinner from '../components/LoadingSpinner';
 import { useCategories } from '../contexts/CategoryContext';
 import { useNotification } from '../contexts/NotificationContext';
 import { getDisplayName } from '../db/services/imageStore';
+import { ACCENT_CYCLE } from '../constants/categoryColors';
 import type { Item } from '../api/types';
 
 export default function CategoryDetail() {
@@ -110,8 +111,12 @@ export default function CategoryDetail() {
         />
       ) : (
         <div className="item-grid">
-          {items.map((item) => (
-            <div key={item.id} className="item-card">
+          {items.map((item, index) => (
+            <div
+              key={item.id}
+              className="item-card"
+              style={{ '--card-accent': ACCENT_CYCLE[index % ACCENT_CYCLE.length] } as React.CSSProperties}
+            >
               {/* 悬浮操作按钮 */}
               <div className="item-actions">
                 <select

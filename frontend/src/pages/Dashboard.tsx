@@ -5,6 +5,7 @@ import ConfirmDialog from '../components/ConfirmDialog';
 import LoadingSpinner from '../components/LoadingSpinner';
 import { useCategories } from '../contexts/CategoryContext';
 import { useNotification } from '../contexts/NotificationContext';
+import { CATEGORY_ACCENTS, DEFAULT_ACCENT } from '../constants/categoryColors';
 import {
   downloadBackup,
   exportDatabaseWithImages,
@@ -23,18 +24,6 @@ const CATEGORY_ICONS: Record<string, string> = {
   '眼影': '🎨',
   '口红': '💄',
   '盒子': '📦',
-};
-
-const CATEGORY_ACCENTS: Record<string, string> = {
-  '发圈': '#e890a0',
-  '发卡': '#e89850',
-  '耳环': '#50c8b8',
-  '项链': '#d4a848',
-  '手链': '#9888d8',
-  '戒指': '#6098d8',
-  '眼影': '#e88060',
-  '口红': '#e84858',
-  '盒子': '#68c068',
 };
 
 export default function Dashboard() {
@@ -170,7 +159,7 @@ export default function Dashboard() {
       {/* 分类卡片 */}
       <div className="category-grid">
         {categories.map((cat) => {
-          const accent = CATEGORY_ACCENTS[cat.name_zh] ?? CATEGORY_ACCENTS['盒子'];
+          const accent = CATEGORY_ACCENTS[cat.name_zh] ?? DEFAULT_ACCENT;
           return (
           <div
             key={cat.id}
