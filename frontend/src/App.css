@@ -1069,9 +1069,16 @@ button:disabled { background: #2c2416; color: #e8dcc8; cursor: not-allowed; }
   transition: background 0.15s, border-color 0.15s;
 }
 .dbrowser-table-btn:hover { background: #3a2e18; }
+/* 选中时与仪表盘 9 分类卡片同款荧光框，颜色按 ACCENT_CYCLE 循环 */
 .dbrowser-table-btn.active {
-  background: #2c2416;
-  border-color: #f0c060;
+  background: color-mix(in srgb, var(--card-accent, #d4a048) 18%, transparent);
+  border-color: var(--card-accent, #d4a048);
+  border-radius: 16px;
+  box-shadow: inset 0 0 14px var(--card-accent, #d4a048),
+              inset 0 2px 8px rgba(0,0,0,.6),
+              0 2px 8px rgba(0,0,0,1),
+              0 0 14px var(--card-accent, #d4a048),
+              0 0 32px var(--card-accent, #d4a048);
 }
 
 .dbrowser-table-name {
@@ -1099,11 +1106,17 @@ button:disabled { background: #2c2416; color: #e8dcc8; cursor: not-allowed; }
   border-bottom: 1px solid #3e3424;
 }
 
+/* 与仪表盘 9 个分类卡片同款荧光框，行号按 ACCENT_CYCLE 每 9 个循环取色 */
 .dbrowser-table-wrap {
   overflow-x: auto;
-  border-radius: 8px;
-  background: #3a3020;
-  box-shadow: 0 1px 3px rgba(0,0,0,.4);
+  border-radius: 16px;
+  border: 1px solid var(--card-accent, #4a3e2a);
+  background: none;
+  box-shadow: inset 0 0 14px var(--card-accent, #d4a048),
+              inset 0 2px 8px rgba(0,0,0,.6),
+              0 2px 8px rgba(0,0,0,1),
+              0 0 14px var(--card-accent, #d4a048),
+              0 0 32px var(--card-accent, #d4a048);
 }
 
 .dbrowser-table {
@@ -1119,7 +1132,7 @@ button:disabled { background: #2c2416; color: #e8dcc8; cursor: not-allowed; }
 }
 
 .dbrowser-table th {
-  background: #2e2818;
+  background: none;
   color: #f0c060;
   font-weight: 600;
   padding: 8px 10px;
@@ -1127,32 +1140,37 @@ button:disabled { background: #2c2416; color: #e8dcc8; cursor: not-allowed; }
   white-space: nowrap;
   font-family: monospace;
   font-size: 0.75rem;
-  border-bottom: 2px solid #483c2a;
+  border-bottom: 2px solid var(--card-accent, #d4a048);
 }
 
 .dbrowser-table td {
   padding: 6px 10px;
-  border-bottom: 1px solid #2e3048;
-  color: #d4c4a0;
+  border-bottom: 1px solid color-mix(in srgb, var(--row-accent, #d4a048) 28%, transparent);
+  color: #2c2416;
   max-width: 220px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.dbrowser-table tbody tr:hover { background: #403525; }
+/* 行 hover 改为行循环荧光色染色，替代棕色 */
+.dbrowser-table tbody tr:hover { background: color-mix(in srgb, var(--row-accent, #d4a048) 14%, transparent); }
 .dbrowser-table tbody tr:last-child td { border-bottom: none; }
 
 .dbrowser-row-num {
-  color: #6e6250 !important;
+  color: var(--row-accent, #6e6250) !important;
   font-size: 0.7rem;
   text-align: center;
   width: 36px;
+  border-left: 3px solid var(--row-accent, transparent);
 }
 
-.dbrowser-cell {
+/* 选择器带 .dbrowser-table td 以压过 .dbrowser-table td 的 color: #2c2416 */
+.dbrowser-table td.dbrowser-cell {
   font-family: monospace;
   font-size: 0.78rem;
+  /* 与图片名同色 #ff0066（CompositeImage / History 图片名称条），无描边 */
+  color: #ff0066;
 }
 
 @media (max-width: 640px) {

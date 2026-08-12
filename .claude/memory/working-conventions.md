@@ -17,6 +17,11 @@ metadata:
 - Shell 是 Git Bash（POSIX sh），非 PowerShell，路径用 `/`
 - 移动文件：新位置写入后必须删除旧文件
 
+## APK 构建
+
+- 每次构建 APK 前，先把 `frontend/public/sw.js` 的 `CACHE_NAME` 版本号 +1（如 jewelry-v6 → jewelry-v7）
+- **Why:** 手机升级安装时保留 App 数据，旧 Service Worker 缓存仍在；若 sw.js 脚本未变，浏览器不会装新 SW，旧缓存一直生效，用户看到的是旧界面（v5→v6 即此教训）
+
 ## Memory 管理
 
 - 合并优先：同类主题更新已有文件，全新主题才新建，避免碎片化

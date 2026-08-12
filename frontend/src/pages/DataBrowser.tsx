@@ -7,6 +7,7 @@ import {
   queryTableData,
 } from '../db/database';
 import { getImageBlobUrl, isBase64 } from '../db/services/imageStore';
+import { ACCENT_CYCLE } from '../constants/categoryColors';
 
 const ROWS_PER_PAGE = 30;
 
@@ -124,6 +125,12 @@ export default function DataBrowser() {
 
   const totalPages = Math.max(1, Math.ceil(totalRows / ROWS_PER_PAGE));
 
+  // 选中表的循环荧光色（与仪表盘 9 分类一致），未选中时用默认金色
+  const selectedIndex = tables.indexOf(selectedTable);
+  const selectedAccent = selectedIndex >= 0
+    ? ACCENT_CYCLE[selectedIndex % ACCENT_CYCLE.length]
+    : undefined;
+
   if (loading) return <LoadingSpinner />;
 
   return (
@@ -134,10 +141,11 @@ export default function DataBrowser() {
         {/* 左侧表列表 */}
         <aside className="dbrowser-sidebar">
           <h3 style={{ fontSize: '0.85rem', color: '#8ec8b8', marginBottom: 8 }}>数据库表</h3>
-          {tables.map((name) => (
+          {tables.map((name, index) => (
             <button
               key={name}
               className={`dbrowser-table-btn${name === selectedTable ? ' active' : ''}`}
+              style={{ '--card-accent': ACCENT_CYCLE[index % ACCENT_CYCLE.length] } as React.CSSProperties}
               onClick={() => loadTable(name, 0)}
             >
               <span>{TABLE_ICONS[name] ?? '📋'}</span>
@@ -163,7 +171,10 @@ export default function DataBrowser() {
               </div>
 
               {/* 数据表格 */}
-              <div className="dbrowser-table-wrap">
+              <div
+                className="dbrowser-table-wrap"
+                style={selectedAccent ? { '--card-accent': selectedAccent } as React.CSSProperties : undefined}
+              >
                 <table className="dbrowser-table">
                   <thead>
                     <tr>
@@ -185,7 +196,10 @@ export default function DataBrowser() {
                       </tr>
                     ) : (
                       rows.map((row, i) => (
-                        <tr key={i}>
+                        <tr
+                          key={i}
+                          style={{ '--row-accent': ACCENT_CYCLE[i % ACCENT_CYCLE.length] } as React.CSSProperties}
+                        >
                           <td className="dbrowser-row-num">{page * ROWS_PER_PAGE + i + 1}</td>
                           {columns.map((col) => (
                             <td key={col.cid} className="dbrowser-cell">
