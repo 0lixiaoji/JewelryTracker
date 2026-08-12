@@ -9,3 +9,4 @@ dist/
 venv/
 frontend/android/.idea/
 *.apk
+jewelry_tracker/

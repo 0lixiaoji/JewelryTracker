@@ -6,6 +6,7 @@ import ImageCropper from '../components/ImageCropper';
 import DropdownSelect from '../components/DropdownSelect';
 import { useCategories } from '../contexts/CategoryContext';
 import { useNotification } from '../contexts/NotificationContext';
+import { CATEGORY_ACCENTS } from '../constants/categoryColors';
 
 interface BatchEntry {
   file: File;
@@ -276,6 +277,7 @@ export default function ItemEditor() {
             onChange={(v) => setCategoryId(Number(v))}
             options={categories.map((c) => ({ value: c.id, label: c.name_zh }))}
             placeholder="-- 请选择 --"
+            accent={CATEGORY_ACCENTS['耳环']}
           />
         </label>
 
@@ -288,6 +290,7 @@ export default function ItemEditor() {
               onChange={(v) => setSubtypeName(String(v))}
               options={subtypeConfig.options.map((opt) => ({ value: opt, label: opt }))}
               placeholder="-- 请选择 --"
+              accent={CATEGORY_ACCENTS['耳环']}
             />
           </label>
         )}
@@ -308,10 +311,10 @@ export default function ItemEditor() {
             placeholder="自动分配"
             style={{
               marginTop: 6,
-              background: 'rgba(232, 144, 160, 0.12)',
-              border: '1px solid #e890a0',
+              background: 'rgba(152, 136, 216, 0.12)',
+              border: `1px solid ${CATEGORY_ACCENTS['手链']}`,
               borderRadius: 8,
-              boxShadow: 'inset 0 0 10px rgba(232,144,160,0.35), inset 0 2px 6px rgba(0,0,0,0.6), 0 2px 6px rgba(0,0,0,1), 0 0 10px rgba(232,144,160,0.35), 0 0 20px rgba(232,144,160,0.2)',
+              boxShadow: 'inset 0 0 10px rgba(152,136,216,0.35), inset 0 2px 6px rgba(0,0,0,0.6), 0 2px 6px rgba(0,0,0,1), 0 0 10px rgba(152,136,216,0.35), 0 0 20px rgba(152,136,216,0.2)',
             }}
           />
         </label>
