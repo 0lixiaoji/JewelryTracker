@@ -123,7 +123,8 @@ const DropdownSelect: React.FC<DropdownSelectProps> = ({
                   ...(isSelected ? OPTION_SELECTED_STYLE : {}),
                   ...(isHovered && !isSelected ? OPTION_HOVER_STYLE : {}),
                 }}
-                onClick={() => {
+                onMouseDown={(e) => {
+                  e.preventDefault();
                   onChange(opt.value);
                   setOpen(false);
                 }}
