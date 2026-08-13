@@ -19,7 +19,8 @@ import { createDailyWear as dbCreateDailyWear, updateDailyWear as dbUpdateDailyW
 import { normalizeCategory as dbNormalizeCategory } from '../db/services/normalization';
 import { listHistory as dbListHistory } from '../db/services/history';
 import { initDatabase, getDBSync } from '../db/database';
-import { getCategoryNextSequence, checkSequenceConflicts, saveImageBatch, isBase64, deleteImage } from '../db/services/imageStore';
+import { getCategoryNextSequence, checkSequenceConflicts, saveImageBatch, isBase64, deleteImage, moveImageFile, parseSequenceFromFilename, parsePrefixFromFilename } from '../db/services/imageStore';
+import { getCategoryFilePrefix } from '../constants/categorySubtypes';
 
 // ── 初始化标记 ────────────────────────────────────────────────────
 
@@ -51,25 +52,6 @@ function lookupCategoryName(categoryId: number): string {
     throw new Error(`分类 ${categoryId} 不存在`);
   }
   return result[0].values[0][0] as string;
-}
-
-/** 从 OPFS 文件名解析编号，如 发圈_2.jpg → 2 */
-function parseSequenceFromFilename(filename: string): number {
-  const dotIdx = filename.lastIndexOf('.');
-  const nameWithoutExt = dotIdx > 0 ? filename.slice(0, dotIdx) : filename;
-  const lastUnderscoreIdx = nameWithoutExt.lastIndexOf('_');
-  if (lastUnderscoreIdx < 0) return 1;
-  const num = parseInt(nameWithoutExt.slice(lastUnderscoreIdx + 1), 10);
-  return isNaN(num) ? 1 : num;
-}
-
-/** 从 OPFS 文件名解析前缀，如 手镯_10.jpg → 手镯 */
-function parsePrefixFromFilename(filename: string): string {
-  const dotIdx = filename.lastIndexOf('.');
-  const nameWithoutExt = dotIdx > 0 ? filename.slice(0, dotIdx) : filename;
-  const lastUnderscoreIdx = nameWithoutExt.lastIndexOf('_');
-  if (lastUnderscoreIdx < 0) return nameWithoutExt;
-  return nameWithoutExt.slice(0, lastUnderscoreIdx);
 }
 
 // ── 分类 ─────────────────────────────────────────────────────────
@@ -183,7 +165,29 @@ export async function updateItem(
   categoryId: number,
 ): Promise<Item> {
   await ensureInit();
-  return dbUpdateItem(itemId, categoryId);
+
+  // 移动分类：同步把 OPFS 文件名改为新分类前缀，
+  // 否则源分类的编号仍被旧文件占用，且目标分类显示名带旧前缀
+  const db = getDBSync();
+  const stmt = db.prepare('SELECT id, category_id, image_path FROM items WHERE id = :id');
+  stmt.bind({ ':id': itemId });
+  if (!stmt.step()) throw new Error(`首饰 ${itemId} 不存在`);
+  const row = stmt.getAsObject();
+  stmt.free();
+
+  const oldPath = row.image_path as string | null;
+  let newPath: string | undefined;
+
+  if (oldPath && !isBase64(oldPath)) {
+    const newPrefix = getCategoryFilePrefix(lookupCategoryName(categoryId));
+    const oldPrefix = parsePrefixFromFilename(oldPath);
+    if (oldPrefix !== newPrefix) {
+      const renamed = await moveImageFile(oldPath, newPrefix);
+      if (renamed) newPath = renamed;
+    }
+  }
+
+  return dbUpdateItem(itemId, categoryId, newPath);
 }
 
 export async function deleteItem(itemId: number): Promise<{ detail: string }> {

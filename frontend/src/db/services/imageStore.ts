@@ -101,6 +101,25 @@ export async function checkSequenceConflicts(
 
 // ── 编号 ──────────────────────────────────────────────────────────
 
+/** 从 OPFS 文件名解析编号，如 发圈_2.jpg → 2 */
+export function parseSequenceFromFilename(filename: string): number {
+  const dotIdx = filename.lastIndexOf('.');
+  const nameWithoutExt = dotIdx > 0 ? filename.slice(0, dotIdx) : filename;
+  const lastUnderscoreIdx = nameWithoutExt.lastIndexOf('_');
+  if (lastUnderscoreIdx < 0) return 1;
+  const num = parseInt(nameWithoutExt.slice(lastUnderscoreIdx + 1), 10);
+  return isNaN(num) ? 1 : num;
+}
+
+/** 从 OPFS 文件名解析前缀，如 手镯_10.jpg → 手镯 */
+export function parsePrefixFromFilename(filename: string): string {
+  const dotIdx = filename.lastIndexOf('.');
+  const nameWithoutExt = dotIdx > 0 ? filename.slice(0, dotIdx) : filename;
+  const lastUnderscoreIdx = nameWithoutExt.lastIndexOf('_');
+  if (lastUnderscoreIdx < 0) return nameWithoutExt;
+  return nameWithoutExt.slice(0, lastUnderscoreIdx);
+}
+
 /**
  * 获取下一组编号：[maxN + 1, maxN + 2, ..., maxN + count]
  *
@@ -171,6 +190,58 @@ export async function saveImageBatch(
   }
 
   return filenames;
+}
+
+// ── 移动（跨分类重命名） ───────────────────────────────────────────
+
+/**
+ * 将图片从旧文件名改名为新分类前缀的文件，供「移动分类」使用。
+ * 编号取新分类下一号（max+1），与「录入」保持一致——
+ * 分类清空后从 1 重新开始，编号紧凑无空洞。
+ *
+ * @returns 新文件名；旧文件不存在或写入失败时返回 null（调用方保留原路径）
+ */
+export async function moveImageFile(oldFilename: string, newPrefix: string): Promise<string | null> {
+  try {
+    const root = await navigator.storage.getDirectory();
+    const imagesDir = await root.getDirectoryHandle(IMAGES_DIR);
+
+    // 读旧文件字节
+    let oldFile: File;
+    try {
+      oldFile = await (await imagesDir.getFileHandle(oldFilename)).getFile();
+    } catch {
+      return null; // 旧文件不存在，无法重命名
+    }
+
+    // 沿用原扩展名（保持 png/gif 等不被 jpg 默认覆盖）
+    const dotIdx = oldFilename.lastIndexOf('.');
+    const ext = dotIdx > 0 ? oldFilename.slice(dotIdx + 1) : 'jpg';
+
+    // 目标编号：取新分类下一号（max+1）
+    const seq = (await getCategoryNextSequence(newPrefix, 1))[0];
+
+    const newFilename = `${newPrefix}_${seq}.${ext}`;
+    const buffer = await oldFile.arrayBuffer();
+
+    const newHandle = await imagesDir.getFileHandle(newFilename, { create: true });
+    const writable = await newHandle.createWritable();
+    await writable.write(buffer);
+    await writable.close();
+
+    // 删除旧文件并清理 blob URL 缓存
+    try { await imagesDir.removeEntry(oldFilename); } catch { /* 已不存在 */ }
+    const cached = blobUrlCache.get(oldFilename);
+    if (cached) {
+      URL.revokeObjectURL(cached);
+      blobUrlCache.delete(oldFilename);
+    }
+
+    return newFilename;
+  } catch (err) {
+    console.warn('moveImageFile failed:', err);
+    return null;
+  }
 }
 
 // ── 读取 ──────────────────────────────────────────────────────────

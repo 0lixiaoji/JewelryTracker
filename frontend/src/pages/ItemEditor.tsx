@@ -7,17 +7,12 @@ import DropdownSelect from '../components/DropdownSelect';
 import { useCategories } from '../contexts/CategoryContext';
 import { useNotification } from '../contexts/NotificationContext';
 import { CATEGORY_ACCENTS } from '../constants/categoryColors';
+import { CATEGORY_SUBTYPES } from '../constants/categorySubtypes';
 
 interface BatchEntry {
   file: File;
   previewUrl: string;
 }
-
-/** 需要细分的分类配置：分类名 → { 选项列表, 默认值 } */
-const CATEGORY_SUBTYPES: Record<string, { options: string[]; default: string }> = {
-  '手链': { options: ['手链', '手镯'], default: '手镯' },
-  '耳环': { options: ['耳环_h', '耳环_s'], default: '耳环_h' },
-};
 
 export default function ItemEditor() {
   const { categories, loading, error, refresh: refreshCategories } = useCategories();
@@ -131,7 +126,15 @@ export default function ItemEditor() {
       notify(`已录入 ${files.length} 件首饰`, 'success');
       // 刷新全局分类统计（各分类首饰数），否则仪表盘计数不更新
       refreshCategories();
-      navigate(`/categories/${categoryId}`);
+      // 从分类详情进入时：pop 掉当前录入页回到原分类页，
+      // 这样分类页再按返回会直接回仪表盘，而不会再进入录入页
+      const originId = Number(searchParams.get('categoryId') ?? 0);
+      if (originId === categoryId) {
+        navigate(-1);
+      } else {
+        // 非同一分类：replace 替换当前录入页，避免返回时残留录入页
+        navigate(`/categories/${categoryId}`, { replace: true });
+      }
     } catch (err) {
       notify(err instanceof Error ? err.message : '录入失败', 'error');
     } finally {

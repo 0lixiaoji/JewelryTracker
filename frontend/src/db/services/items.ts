@@ -90,7 +90,7 @@ export function createItemsBatch(categoryId: number, imageBase64s: string[]): It
   return result;
 }
 
-export function updateItem(itemId: number, categoryId: number): Item {
+export function updateItem(itemId: number, categoryId: number, newImagePath?: string): Item {
   const db = getDBSync();
 
   const existing = getItemById(db, itemId);
@@ -102,10 +102,19 @@ export function updateItem(itemId: number, categoryId: number): Item {
     throw new Error(`分类 ${categoryId} 不存在`);
   }
 
-  db.run('UPDATE items SET category_id = :catId WHERE id = :id', {
-    ':catId': categoryId,
-    ':id': itemId,
-  });
+  if (newImagePath !== undefined) {
+    // 移动分类时同步更新图片文件名（前缀对齐新分类）
+    db.run('UPDATE items SET category_id = :catId, image_path = :img WHERE id = :id', {
+      ':catId': categoryId,
+      ':img': newImagePath,
+      ':id': itemId,
+    });
+  } else {
+    db.run('UPDATE items SET category_id = :catId WHERE id = :id', {
+      ':catId': categoryId,
+      ':id': itemId,
+    });
+  }
   markDirty();
 
   const row = getItemById(db, itemId)!;
