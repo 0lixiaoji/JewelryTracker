@@ -20,7 +20,7 @@ const CATEGORY_SUBTYPES: Record<string, { options: string[]; default: string }> 
 };
 
 export default function ItemEditor() {
-  const { categories, loading, error } = useCategories();
+  const { categories, loading, error, refresh: refreshCategories } = useCategories();
   const { notify } = useNotification();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
@@ -129,6 +129,8 @@ export default function ItemEditor() {
       }
       await createItemsBatch(categoryId as number, files, subtypeName || undefined, seqNum);
       notify(`已录入 ${files.length} 件首饰`, 'success');
+      // 刷新全局分类统计（各分类首饰数），否则仪表盘计数不更新
+      refreshCategories();
       navigate(`/categories/${categoryId}`);
     } catch (err) {
       notify(err instanceof Error ? err.message : '录入失败', 'error');
