@@ -30,7 +30,7 @@ export default function CategoryDetail() {
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      setItems(await fetchCategoryItems(categoryId, 'newest'));
+      setItems(await fetchCategoryItems(categoryId, 'nameDesc'));
     } catch (e) {
       notify(e instanceof Error ? e.message : '加载失败', 'error');
     } finally {

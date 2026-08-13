@@ -63,7 +63,7 @@ export async function fetchCategories(): Promise<CategoryWithStats[]> {
 
 export async function fetchCategoryItems(
   categoryId: number,
-  sortBy: 'number' | 'newest' = 'number',
+  sortBy: 'number' | 'nameDesc' = 'number',
 ): Promise<Item[]> {
   await ensureInit();
   return getCategoryItems(categoryId, sortBy);

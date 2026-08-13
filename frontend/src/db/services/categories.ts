@@ -33,6 +33,7 @@ function rowToItem(row: Record<string, unknown>): Item {
 // - 无法解析:   null / base64       → 排在最后
 //
 // 排序规则: 先按 prefix 字母序，再按 num 数字序
+const UNPARSEABLE = '￿'; // 无法解析项（null / base64）的排序哨兵，始终排在最后
 
 interface SortParts {
   prefix: string;
@@ -40,8 +41,8 @@ interface SortParts {
 }
 
 function parseSortParts(imagePath: string | null): SortParts {
-  if (!imagePath) return { prefix: '￿', num: 0 };
-  if (imagePath.startsWith('data:')) return { prefix: '￿', num: 0 };
+  if (!imagePath) return { prefix: UNPARSEABLE, num: 0 };
+  if (imagePath.startsWith('data:')) return { prefix: UNPARSEABLE, num: 0 };
 
   // 去掉扩展名，再按最后一个 _ 拆分为 prefix 和 num
   const dotIdx = imagePath.lastIndexOf('.');
@@ -86,11 +87,11 @@ export function listCategories(): CategoryWithStats[] {
 }
 
 /** 查询某分类下的首饰
- *  sortBy: 'number'（默认）按编号升序（每日佩戴页用）；'newest' 按录入时间倒序（分类详情页用）
+ *  sortBy: 'number'（默认）按编号升序（每日佩戴页用）；'nameDesc' 按名称倒序（分类详情页用）
  */
 export function getCategoryItems(
   categoryId: number,
-  sortBy: 'number' | 'newest' = 'number',
+  sortBy: 'number' | 'nameDesc' = 'number',
 ): Item[] {
   const db = getDBSync();
   const stmt = db.prepare(
@@ -105,17 +106,21 @@ export function getCategoryItems(
   }
   stmt.free();
 
-  if (sortBy === 'newest') {
-    // 按录入时间倒序（最新录入在前），id 作为同秒并列时的稳定次序；
-    // created_at 为 NULL 的项（旧数据）排在最后
+  if (sortBy === 'nameDesc') {
+    // 按名称（prefix 字母序 → num 数字序）倒序排列，
+    // 无法解析的项（null / base64）仍排在最后
     rows.sort((a, b) => {
-      const ta = a.created_at ?? '';
-      const tb = b.created_at ?? '';
-      if (ta !== tb) return ta > tb ? -1 : 1;
-      return b.id - a.id;
+      const pa = parseSortParts(a.image_path);
+      const pb = parseSortParts(b.image_path);
+      const aLast = pa.prefix === UNPARSEABLE;
+      const bLast = pb.prefix === UNPARSEABLE;
+      if (aLast !== bLast) return aLast ? 1 : -1;
+      const prefixCmp = pb.prefix.localeCompare(pa.prefix);
+      if (prefixCmp !== 0) return prefixCmp;
+      return pb.num - pa.num;
     });
   } else {
-    // 按 prefix 字母序 → num 数字序升序排列，
+    // 'number'：按 prefix 字母序 → num 数字序升序排列，
     // 无法解析的项（null / base64）排到最后
     rows.sort((a, b) => {
       const pa = parseSortParts(a.image_path);

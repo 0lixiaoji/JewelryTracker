@@ -527,7 +527,31 @@ export function queryTableData(
   if (!colsResult.length) return [];
   const columns = colsResult[0].values.map((row) => row[1] as string);
 
-  const stmt = database.prepare(`SELECT * FROM "${tableName}" ORDER BY rowid DESC LIMIT ? OFFSET ?`);
+  // items 表先按分类 sort_order 倒序（盒子→戒指→…→发卡），分类内再按文件名倒序：
+  // 把「分类_编号」拆成 前缀 + 编号，前缀倒序 + 编号倒序（多位数不串位），base64 / NULL 排最后。
+  // categories 表按 sort_order 倒序；其余表维持 rowid 倒序（最新写入在前）
+  const orderBy =
+    tableName === 'items'
+      ? `(
+          SELECT i.*,
+            c.sort_order AS __catOrder,
+            CASE WHEN i.image_path IS NULL OR i.image_path LIKE 'data:%' THEN 1 ELSE 0 END AS __unp,
+            CASE WHEN instr(i.image_path, '.') > 0
+                 THEN substr(i.image_path, 1, instr(i.image_path, '.') - 1)
+                 ELSE i.image_path END AS __noext
+          FROM items i
+          JOIN categories c ON c.id = i.category_id
+        )
+        ORDER BY __catOrder DESC,
+          __unp,
+          trim(__noext, '0123456789') DESC,
+          CAST(substr(__noext, length(trim(__noext, '0123456789')) + 1) AS INTEGER) DESC,
+          id DESC`
+      : tableName === 'categories'
+        ? `"categories" ORDER BY sort_order DESC`
+        : `"${tableName}" ORDER BY rowid DESC`;
+
+  const stmt = database.prepare(`SELECT * FROM ${orderBy} LIMIT ? OFFSET ?`);
   stmt.bind([limit, offset] as unknown as Record<string, unknown>);
   const rows: Record<string, unknown>[] = [];
   while (stmt.step()) {
