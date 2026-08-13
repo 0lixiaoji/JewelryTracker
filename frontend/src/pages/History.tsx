@@ -5,6 +5,7 @@ import ImageWithFallback from '../components/ImageWithFallback';
 import LoadingSpinner from '../components/LoadingSpinner';
 import { useCategories } from '../contexts/CategoryContext';
 import { getDisplayName } from '../db/services/imageStore';
+import useFullscreenImageViewer from '../hooks/useFullscreenImageViewer';
 import type { WearRecord } from '../api/types';
 
 const DAY_ACCENTS = [
@@ -47,6 +48,7 @@ export default function History() {
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(true);
+  const { openImage, viewerEl } = useFullscreenImageViewer();
   const pageSize = 20;
 
   const load = async (p: number) => {
@@ -96,7 +98,12 @@ export default function History() {
                 {rec.items.map((item) => (
                   <div key={item.id} className="history-item" style={{ position: 'relative' }}>
                     {item.image_path ? (
-                      <ImageWithFallback src={item.image_path} alt="" />
+                      <div
+                        onClick={() => openImage(item.image_path!)}
+                        style={{ cursor: 'zoom-in' }}
+                      >
+                        <ImageWithFallback src={item.image_path} alt="" />
+                      </div>
                     ) : (
                       <div className="img-fallback" style={{ width: 60, height: 60 }}>🖼️</div>
                     )}
@@ -146,6 +153,9 @@ export default function History() {
           )}
         </>
       )}
+
+      {/* 全屏查看原图 */}
+      {viewerEl}
     </div>
   );
 }

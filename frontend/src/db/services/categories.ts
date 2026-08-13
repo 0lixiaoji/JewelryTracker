@@ -85,7 +85,13 @@ export function listCategories(): CategoryWithStats[] {
   return rows;
 }
 
-export function getCategoryItems(categoryId: number): Item[] {
+/** 查询某分类下的首饰
+ *  sortBy: 'number'（默认）按编号升序（每日佩戴页用）；'newest' 按录入时间倒序（分类详情页用）
+ */
+export function getCategoryItems(
+  categoryId: number,
+  sortBy: 'number' | 'newest' = 'number',
+): Item[] {
   const db = getDBSync();
   const stmt = db.prepare(
     `SELECT id, category_id, image_path, usage_count, created_at
@@ -99,15 +105,26 @@ export function getCategoryItems(categoryId: number): Item[] {
   }
   stmt.free();
 
-  // 按 prefix 字母序 → num 数字序升序排列，
-  // 无法解析的项（null / base64）排到最后
-  rows.sort((a, b) => {
-    const pa = parseSortParts(a.image_path);
-    const pb = parseSortParts(b.image_path);
-    const prefixCmp = pa.prefix.localeCompare(pb.prefix);
-    if (prefixCmp !== 0) return prefixCmp;
-    return pa.num - pb.num;
-  });
+  if (sortBy === 'newest') {
+    // 按录入时间倒序（最新录入在前），id 作为同秒并列时的稳定次序；
+    // created_at 为 NULL 的项（旧数据）排在最后
+    rows.sort((a, b) => {
+      const ta = a.created_at ?? '';
+      const tb = b.created_at ?? '';
+      if (ta !== tb) return ta > tb ? -1 : 1;
+      return b.id - a.id;
+    });
+  } else {
+    // 按 prefix 字母序 → num 数字序升序排列，
+    // 无法解析的项（null / base64）排到最后
+    rows.sort((a, b) => {
+      const pa = parseSortParts(a.image_path);
+      const pb = parseSortParts(b.image_path);
+      const prefixCmp = pa.prefix.localeCompare(pb.prefix);
+      if (prefixCmp !== 0) return prefixCmp;
+      return pa.num - pb.num;
+    });
+  }
 
   return rows;
 }

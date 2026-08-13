@@ -7,6 +7,7 @@ import {
   queryTableData,
 } from '../db/database';
 import { getImageBlobUrl, isBase64 } from '../db/services/imageStore';
+import useFullscreenImageViewer from '../hooks/useFullscreenImageViewer';
 import { ACCENT_CYCLE } from '../constants/categoryColors';
 
 const ROWS_PER_PAGE = 30;
@@ -27,10 +28,11 @@ function formatCell(value: unknown): string {
   return String(value);
 }
 
-/** image_path 列的缩略图单元格 — 异步从 OPFS 加载图片显示 */
+/** image_path 列的缩略图单元格 — 异步从 OPFS 加载图片显示，点击查看原图 */
 function ImageCell({ path }: { path: string }) {
   const [url, setUrl] = useState<string | null>(null);
   const [failed, setFailed] = useState(false);
+  const { openImage, viewerEl } = useFullscreenImageViewer();
 
   useEffect(() => {
     if (isBase64(path)) {
@@ -51,19 +53,24 @@ function ImageCell({ path }: { path: string }) {
   if (failed) return <span style={{ color: '#6e6250', fontSize: '0.8rem' }}>🖼️ 加载失败</span>;
   if (!url) return <span style={{ color: '#6e6250' }}>加载中…</span>;
   return (
-    <img
-      src={url}
-      alt={path}
-      title={path}
-      style={{
-        width: 60,
-        height: 60,
-        objectFit: 'contain',
-        borderRadius: 4,
-        display: 'block',
-        background: 'transparent',
-      }}
-    />
+    <>
+      <img
+        src={url}
+        alt={path}
+        title={path}
+        onClick={() => openImage(path)}
+        style={{
+          width: 60,
+          height: 60,
+          objectFit: 'contain',
+          borderRadius: 4,
+          display: 'block',
+          background: 'transparent',
+          cursor: 'zoom-in',
+        }}
+      />
+      {viewerEl}
+    </>
   );
 }
 

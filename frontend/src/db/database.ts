@@ -527,7 +527,7 @@ export function queryTableData(
   if (!colsResult.length) return [];
   const columns = colsResult[0].values.map((row) => row[1] as string);
 
-  const stmt = database.prepare(`SELECT * FROM "${tableName}" LIMIT ? OFFSET ?`);
+  const stmt = database.prepare(`SELECT * FROM "${tableName}" ORDER BY rowid DESC LIMIT ? OFFSET ?`);
   stmt.bind([limit, offset] as unknown as Record<string, unknown>);
   const rows: Record<string, unknown>[] = [];
   while (stmt.step()) {

@@ -61,9 +61,12 @@ export async function fetchCategories(): Promise<CategoryWithStats[]> {
   return listCategories();
 }
 
-export async function fetchCategoryItems(categoryId: number): Promise<Item[]> {
+export async function fetchCategoryItems(
+  categoryId: number,
+  sortBy: 'number' | 'newest' = 'number',
+): Promise<Item[]> {
   await ensureInit();
-  return getCategoryItems(categoryId);
+  return getCategoryItems(categoryId, sortBy);
 }
 
 // ── 首饰 CRUD ────────────────────────────────────────────────────

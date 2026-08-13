@@ -8,6 +8,7 @@ import LoadingSpinner from '../components/LoadingSpinner';
 import { useCategories } from '../contexts/CategoryContext';
 import { useNotification } from '../contexts/NotificationContext';
 import { getDisplayName } from '../db/services/imageStore';
+import useFullscreenImageViewer from '../hooks/useFullscreenImageViewer';
 import { ACCENT_CYCLE } from '../constants/categoryColors';
 import type { Item } from '../api/types';
 
@@ -22,13 +23,14 @@ export default function CategoryDetail() {
   const [loading, setLoading] = useState(true);
   const [normalizing, setNormalizing] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<Item | null>(null);
+  const { openImage, viewerEl } = useFullscreenImageViewer();
 
   const category = categories.find((c) => c.id === categoryId);
 
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      setItems(await fetchCategoryItems(categoryId));
+      setItems(await fetchCategoryItems(categoryId, 'newest'));
     } catch (e) {
       notify(e instanceof Error ? e.message : '加载失败', 'error');
     } finally {
@@ -166,9 +168,14 @@ export default function CategoryDetail() {
                 </button>
               </div>
 
-              {/* 图片 */}
+              {/* 图片 — 点击查看原图 */}
               {item.image_path ? (
-                <ImageWithFallback src={item.image_path} alt="" />
+                <div
+                  onClick={() => openImage(item.image_path!)}
+                  style={{ cursor: 'zoom-in' }}
+                >
+                  <ImageWithFallback src={item.image_path} alt="" />
+                </div>
               ) : (
                 <div className="img-fallback" style={{ aspectRatio: '1' }}>🖼️</div>
               )}
@@ -197,6 +204,9 @@ export default function CategoryDetail() {
         onConfirm={handleDelete}
         onCancel={() => setDeleteTarget(null)}
       />
+
+      {/* 全屏查看原图 */}
+      {viewerEl}
     </div>
   );
 }
