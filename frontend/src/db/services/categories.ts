@@ -59,6 +59,65 @@ function parseSortParts(imagePath: string | null): SortParts {
   return { prefix, num: isNaN(num) ? Infinity : num };
 }
 
+/** 名称倒序比较：prefix 字母序倒序 → num 数字序倒序；无法解析项（null/base64）最后 */
+function compareNameDesc(a: Item, b: Item): number {
+  const pa = parseSortParts(a.image_path);
+  const pb = parseSortParts(b.image_path);
+  const aLast = pa.prefix === UNPARSEABLE;
+  const bLast = pb.prefix === UNPARSEABLE;
+  if (aLast !== bLast) return aLast ? 1 : -1;
+  const prefixCmp = pb.prefix.localeCompare(pa.prefix);
+  if (prefixCmp !== 0) return prefixCmp;
+  return pb.num - pa.num;
+}
+
+/**
+ * 名称倒序 + 双类型交错排布
+ *
+ * 手链/耳环这类「由两种类型组成」的分类（手链+手镯、耳环_h+耳环_s），
+ * 各类型先按名称倒序排好，再按「多的两列、少的一列」交错成平铺数组：
+ *   行0 = [多_1st, 多_2nd, 少_1st]  → 首行即同时出现两种类型的排序第一
+ *   行1 = [多_3rd, 多_4th, 少_2nd]  ...
+ * 普通单类型分类保持原名称倒序不变。
+ */
+function interleaveNameDesc(rows: Item[]): Item[] {
+  // 1. 按文件前缀分组；无法解析的（null / base64）归入末尾
+  const groups = new Map<string, Item[]>();
+  const unparseable: Item[] = [];
+  for (const row of rows) {
+    const prefix = parseSortParts(row.image_path).prefix;
+    if (prefix === UNPARSEABLE) {
+      unparseable.push(row);
+    } else {
+      const arr = groups.get(prefix);
+      if (arr) arr.push(row);
+      else groups.set(prefix, [row]);
+    }
+  }
+
+  // 2. 类型数非 2（单类型或异常多类型）→ 维持原倒序兜底
+  const groupList = [...groups.values()];
+  if (groupList.length !== 2) {
+    rows.sort(compareNameDesc);
+    return rows;
+  }
+
+  // 3. 双类型：数量多的两列在前，少的单列在后；组内按编号倒序
+  const [major, minor] = [...groupList].sort((x, y) => y.length - x.length);
+  major.sort((a, b) => parseSortParts(b.image_path).num - parseSortParts(a.image_path).num);
+  minor.sort((a, b) => parseSortParts(b.image_path).num - parseSortParts(a.image_path).num);
+
+  const result: Item[] = [];
+  const maxRows = Math.max(Math.ceil(major.length / 2), minor.length);
+  for (let r = 0; r < maxRows; r++) {
+    if (r * 2 < major.length) result.push(major[r * 2]);
+    if (r * 2 + 1 < major.length) result.push(major[r * 2 + 1]);
+    if (r < minor.length) result.push(minor[r]);
+  }
+  result.push(...unparseable);
+  return result;
+}
+
 // ── 查询 ──────────────────────────────────────────────────────────
 
 export function listCategories(): CategoryWithStats[] {
@@ -100,25 +159,16 @@ export function getCategoryItems(
      WHERE category_id = :catId`,
   );
   stmt.bind({ ':catId': categoryId });
-  const rows: Item[] = [];
+  let rows: Item[] = [];
   while (stmt.step()) {
     rows.push(rowToItem(stmt.getAsObject()));
   }
   stmt.free();
 
   if (sortBy === 'nameDesc') {
-    // 按名称（prefix 字母序 → num 数字序）倒序排列，
-    // 无法解析的项（null / base64）仍排在最后
-    rows.sort((a, b) => {
-      const pa = parseSortParts(a.image_path);
-      const pb = parseSortParts(b.image_path);
-      const aLast = pa.prefix === UNPARSEABLE;
-      const bLast = pb.prefix === UNPARSEABLE;
-      if (aLast !== bLast) return aLast ? 1 : -1;
-      const prefixCmp = pb.prefix.localeCompare(pa.prefix);
-      if (prefixCmp !== 0) return prefixCmp;
-      return pb.num - pa.num;
-    });
+    // 名称倒序排列；双类型分类（手链/耳环）额外按「多的两列、少的一列」交错，
+    // 让两种类型的排序第一同时出现在首行
+    rows = interleaveNameDesc(rows);
   } else {
     // 'number'：按 prefix 字母序 → num 数字序升序排列，
     // 无法解析的项（null / base64）排到最后

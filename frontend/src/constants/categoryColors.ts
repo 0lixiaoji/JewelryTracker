@@ -28,3 +28,20 @@ export const ACCENT_CYCLE: string[] = [
   CATEGORY_ACCENTS['戒指'],
   CATEGORY_ACCENTS['盒子'],
 ];
+
+// 双类型分类（手链/耳环）的冷暖色系循环：
+// 数量多的类型用暖色系（6 色，循环更长），数量少的类型用冷色系（3 色）
+export const WARM_CYCLE: string[] = [
+  CATEGORY_ACCENTS['发卡'],
+  CATEGORY_ACCENTS['发圈'],
+  CATEGORY_ACCENTS['眼影'],
+  CATEGORY_ACCENTS['口红'],
+  CATEGORY_ACCENTS['项链'],
+  CATEGORY_ACCENTS['手链'],
+];
+
+export const COOL_CYCLE: string[] = [
+  CATEGORY_ACCENTS['耳环'],
+  CATEGORY_ACCENTS['戒指'],
+  CATEGORY_ACCENTS['盒子'],
+];

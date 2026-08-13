@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { deleteItem, fetchCategoryItems, normalizeCategory, replaceItemImage, updateItem } from '../api/client';
 import ConfirmDialog from '../components/ConfirmDialog';
@@ -7,10 +7,20 @@ import ImageWithFallback from '../components/ImageWithFallback';
 import LoadingSpinner from '../components/LoadingSpinner';
 import { useCategories } from '../contexts/CategoryContext';
 import { useNotification } from '../contexts/NotificationContext';
-import { getDisplayName } from '../db/services/imageStore';
+import { getDisplayName, isBase64, parsePrefixFromFilename } from '../db/services/imageStore';
 import useFullscreenImageViewer from '../hooks/useFullscreenImageViewer';
-import { ACCENT_CYCLE } from '../constants/categoryColors';
+import { ACCENT_CYCLE, COOL_CYCLE, WARM_CYCLE } from '../constants/categoryColors';
 import type { Item } from '../api/types';
+
+// 双类型分类（手链/耳环）的卡片取色：
+// 数量多的类型 → 暖色系循环，数量少的类型 → 冷色系循环，两种类型一眼可分。
+// base64 / 无图（无法解析前缀）统一归入哨兵组，不影响双类型判断。
+const UNPARSEABLE_PREFIX = '￿';
+
+function itemPrefix(imagePath: string | null): string {
+  if (!imagePath || isBase64(imagePath)) return UNPARSEABLE_PREFIX;
+  return parsePrefixFromFilename(imagePath);
+}
 
 export default function CategoryDetail() {
   const { id } = useParams<{ id: string }>();
@@ -26,6 +36,53 @@ export default function CategoryDetail() {
   const { openImage, viewerEl } = useFullscreenImageViewer();
 
   const category = categories.find((c) => c.id === categoryId);
+
+  // 双类型分类（手链/耳环）的取色与列位：
+  // - 数量多的类型走暖色系、与少类型并排的前段占左两列（列位 1,2,1,2…）
+  // - 数量少的类型走冷色系、固定右列（列位 3），避免数量多的为奇数时被顶到第 2 列
+  // - 少类型排完后，续排前 3 行右列各空一格，多类型剩余部分再铺满三列（列位 1,2 ×3 行，之后 1,2,3…）
+  // 单类型保持原 9 色循环、自动填充。
+  const dualTypeLayout = useMemo(() => {
+    const groups = new Map<string, Item[]>();
+    for (const it of items) {
+      const p = itemPrefix(it.image_path);
+      const arr = groups.get(p) ?? [];
+      arr.push(it);
+      groups.set(p, arr);
+    }
+
+    const accents = new Map<number, string>();
+    const columns = new Map<number, number>();
+    const groupList = [...groups.values()];
+    const isDual = groupList.length === 2;
+    if (isDual) {
+      const [major, minor] = groupList.sort((a, b) => b.length - a.length);
+      // 前 pairedCount 个「多类型」与「少类型」并排（多占左两列、少固定右列）；
+      // 少类型排完后，续排前 3 行右列各空一格，其余多类型再铺满三列。
+      const pairedCount = Math.min(major.length, minor.length * 2);
+      major.forEach((it, i) => {
+        accents.set(it.id, WARM_CYCLE[i % WARM_CYCLE.length]);
+        if (i < pairedCount) {
+          columns.set(it.id, (i % 2) + 1); // 与少类型并排：左两列左右交替
+        } else {
+          // 少类型结束后：续排前 3 行右列（列位 3）各空一格，之后再铺满三列。
+          // 并排段占 minor.length 行（少类型每件占一行右列），续排从下一行开始；
+          // 前 3 行每行只占列 1、2（每 2 个续排项空 1 格），至多空 3 格。
+          const j = i - pairedCount;
+          const gapCells = Math.min(Math.floor(j / 2), 3);
+          const cellIndex = minor.length * 3 + j + gapCells;
+          columns.set(it.id, (cellIndex % 3) + 1);
+        }
+      });
+      minor.forEach((it, i) => {
+        accents.set(it.id, COOL_CYCLE[i % COOL_CYCLE.length]);
+        columns.set(it.id, 3); // 少的始终在右列
+      });
+    } else {
+      items.forEach((it, i) => accents.set(it.id, ACCENT_CYCLE[i % ACCENT_CYCLE.length]));
+    }
+    return { accents, columns, isDual };
+  }, [items]);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -112,12 +169,18 @@ export default function CategoryDetail() {
           action={{ label: '录入首饰', onClick: () => navigate(`/items/new?categoryId=${categoryId}`) }}
         />
       ) : (
-        <div className="item-grid">
+        <div
+          className="item-grid"
+          style={dualTypeLayout.isDual ? { gridTemplateColumns: 'repeat(3, minmax(0, 1fr))' } : undefined}
+        >
           {items.map((item, index) => (
             <div
               key={item.id}
               className="item-card"
-              style={{ '--card-accent': ACCENT_CYCLE[index % ACCENT_CYCLE.length] } as React.CSSProperties}
+              style={{
+                '--card-accent': dualTypeLayout.accents.get(item.id) ?? ACCENT_CYCLE[index % ACCENT_CYCLE.length],
+                gridColumn: dualTypeLayout.columns.get(item.id) ?? undefined,
+              } as React.CSSProperties}
             >
               {/* 悬浮操作按钮 */}
               <div className="item-actions">
