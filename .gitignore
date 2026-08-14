@@ -10,3 +10,5 @@ venv/
 frontend/android/.idea/
 *.apk
 jewelry_tracker/
+task-progress.log
+task.stdout.log
