@@ -48,7 +48,7 @@ export default function History() {
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(true);
-  const { openImage, viewerEl } = useFullscreenImageViewer();
+  const { openGallery, viewerEl } = useFullscreenImageViewer();
   const pageSize = 20;
 
   const load = async (p: number) => {
@@ -99,7 +99,14 @@ export default function History() {
                   <div key={item.id} className="history-item" style={{ position: 'relative' }}>
                     {item.image_path ? (
                       <div
-                        onClick={() => openImage(item.image_path!)}
+                        onClick={() => {
+                          // 以「当天记录的全部图片」为一组，点击后左右滑动浏览
+                          const paths = rec.items
+                            .filter((it) => it.image_path)
+                            .map((it) => it.image_path as string);
+                          const idx = paths.indexOf(item.image_path as string);
+                          openGallery(paths, idx >= 0 ? idx : 0);
+                        }}
                         style={{ cursor: 'zoom-in' }}
                       >
                         <ImageWithFallback src={item.image_path} alt="" />

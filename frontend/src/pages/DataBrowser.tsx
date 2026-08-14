@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import LoadingSpinner from '../components/LoadingSpinner';
 import {
   getTableNames,
@@ -28,11 +28,10 @@ function formatCell(value: unknown): string {
   return String(value);
 }
 
-/** image_path 列的缩略图单元格 — 异步从 OPFS 加载图片显示，点击查看原图 */
-function ImageCell({ path }: { path: string }) {
+/** image_path 列的缩略图单元格 — 异步从 OPFS 加载图片显示，点击交由父级打开可滑动浏览的原图 */
+function ImageCell({ path, onOpen }: { path: string; onOpen: (path: string) => void }) {
   const [url, setUrl] = useState<string | null>(null);
   const [failed, setFailed] = useState(false);
-  const { openImage, viewerEl } = useFullscreenImageViewer();
 
   useEffect(() => {
     if (isBase64(path)) {
@@ -53,24 +52,21 @@ function ImageCell({ path }: { path: string }) {
   if (failed) return <span style={{ color: '#6e6250', fontSize: '0.8rem' }}>🖼️ 加载失败</span>;
   if (!url) return <span style={{ color: '#6e6250' }}>加载中…</span>;
   return (
-    <>
-      <img
-        src={url}
-        alt={path}
-        title={path}
-        onClick={() => openImage(path)}
-        style={{
-          width: 60,
-          height: 60,
-          objectFit: 'contain',
-          borderRadius: 4,
-          display: 'block',
-          background: 'transparent',
-          cursor: 'zoom-in',
-        }}
-      />
-      {viewerEl}
-    </>
+    <img
+      src={url}
+      alt={path}
+      title={path}
+      onClick={() => onOpen(path)}
+      style={{
+        width: 60,
+        height: 60,
+        objectFit: 'contain',
+        borderRadius: 4,
+        display: 'block',
+        background: 'transparent',
+        cursor: 'zoom-in',
+      }}
+    />
   );
 }
 
@@ -84,6 +80,17 @@ export default function DataBrowser() {
   const [totalRows, setTotalRows] = useState(0);
   const [loading, setLoading] = useState(true);
   const [tableLoading, setTableLoading] = useState(false);
+  const { openGallery, viewerEl } = useFullscreenImageViewer();
+
+  // items 表当前页全部图片路径，用于全屏左右滑动切换
+  const itemImagePaths = useMemo(
+    () =>
+      selectedTable === 'items'
+        ? rows.filter((r) => typeof r['image_path'] === 'string' && r['image_path'])
+              .map((r) => r['image_path'] as string)
+        : [],
+    [selectedTable, rows],
+  );
 
   // 加载表列表
   useEffect(() => {
@@ -213,7 +220,13 @@ export default function DataBrowser() {
                           {columns.map((col) => (
                             <td key={col.cid} className="dbrowser-cell">
                               {col.name === 'image_path' && row[col.name] && typeof row[col.name] === 'string'
-                                ? <ImageCell path={row[col.name] as string} />
+                                ? <ImageCell
+                                    path={row[col.name] as string}
+                                    onOpen={(path) => {
+                                      const idx = itemImagePaths.indexOf(path);
+                                      openGallery(itemImagePaths, idx >= 0 ? idx : 0);
+                                    }}
+                                  />
                                 : formatCell(row[col.name])
                               }
                             </td>
@@ -251,6 +264,9 @@ export default function DataBrowser() {
           )}
         </div>
       </div>
+
+      {/* 全屏查看原图（左右滑动切换） */}
+      {viewerEl}
     </div>
   );
 }
