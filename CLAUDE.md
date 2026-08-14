@@ -1,3 +1,7 @@
+@./.claude/memory/design-decisions.md
+@./.claude/memory/working-conventions.md
+@./.claude/memory/db-init.md
+
 # JewelryTracker — 首饰管家
 
 首饰佩戴记录移动应用 — 管理 9 种首饰的日常佩戴与归一化统计。**纯前端离线架构，零后端依赖。**
@@ -161,10 +165,3 @@ JewelryTracker/
 | `npm run cap:open:ios` | 打开 Xcode |
 | `npm run cap:build:android` | 构建 + 同步到 Android |
 | `npm run cap:build:ios` | 构建 + 同步到 iOS |
-
-## 关键设计约束
-
-以下为非显而易见的设计决策，详见 memory：
-
-- [[design-decisions]] — 首饰无名称、归一化逻辑、每日佩戴可修改、单人无认证
-- [[working-conventions]] — 排查/操作/凭证/Git/Memory 管理准则

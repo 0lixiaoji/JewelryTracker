@@ -24,9 +24,9 @@ metadata:
 
 ## Memory 管理
 
+- 记忆文件统一放项目 `.claude/memory/`，经 CLAUDE.md 顶部 `@import` 自动加载进每个会话
 - 合并优先：同类主题更新已有文件，全新主题才新建，避免碎片化
-- 写后同步 MEMORY.md 索引
-- 默认项目 `.claude/memory/`，「系统目录」才写全局
+- 新建/删除记忆文件后，同步更新 CLAUDE.md 的 `@import` 列表（即索引）
 
 ## 进度反馈
 
