@@ -19,5 +19,12 @@ public class MainActivity extends BridgeActivity {
             new ChunkWriter(this),
             "NativeChunkWriter"
         );
+
+        // 注册备份导出器 — JS 通过 window.NativeBackupExporter 调用，
+        // 用于每日备份分片直写 内部存储/Download/JewelryTracker/。
+        webView.addJavascriptInterface(
+            new BackupExporter(this),
+            "NativeBackupExporter"
+        );
     }
 }

@@ -7,10 +7,8 @@ import { useCategories } from '../contexts/CategoryContext';
 import { useNotification } from '../contexts/NotificationContext';
 import { CATEGORY_ACCENTS, DEFAULT_ACCENT } from '../constants/categoryColors';
 import {
-  downloadBackup,
   exportDatabaseWithImages,
   importDatabase,
-  listBackups,
 } from '../db/database';
 
 
@@ -41,10 +39,6 @@ export default function Dashboard() {
   const [importing, setImporting] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // ── 备份管理 ─────────────────────────────────────────────────────
-  const [showBackups, setShowBackups] = useState(false);
-  const [backupList, setBackupList] = useState<string[]>([]);
-
   const totalItems = categories.reduce((sum, c) => sum + c.item_count, 0);
   const canNormalizeAny = categories.some((c) => c.can_normalize);
 
@@ -72,7 +66,9 @@ export default function Dashboard() {
         setExportProgress(`${current}/${total}`);
       });
       setExportProgress('');
-      if (result === 'shared') {
+      if (result === 'saved') {
+        notify('已保存至 内部存储/Download/JewelryTracker/', 'success');
+      } else if (result === 'shared') {
         notify('请在分享面板中选择「保存到文件」', 'success');
       } else {
         notify('浏览器下载已开始', 'success');
@@ -99,25 +95,6 @@ export default function Dashboard() {
     } finally {
       setImporting(false);
       if (fileInputRef.current) fileInputRef.current.value = '';
-    }
-  };
-
-  // ── 备份管理 ─────────────────────────────────────────────────────
-  const handleShowBackups = () => {
-    setBackupList(listBackups());
-    setShowBackups(true);
-  };
-
-  const handleDownloadBackup = async (filename: string) => {
-    try {
-      const result = await downloadBackup(filename);
-      if (result === 'shared') {
-        notify('请在分享面板中选择保存位置', 'success');
-      } else {
-        notify('浏览器下载已开始', 'success');
-      }
-    } catch (e) {
-      notify(e instanceof Error ? e.message : '下载失败', 'error');
     }
   };
 
@@ -201,9 +178,6 @@ export default function Dashboard() {
               ? (exportProgress ? `⏳ ${exportProgress}` : '⏳ 打包中…')
               : '📥 导出备份'}
           </button>
-          <button className="btn-sm" style={{ paddingLeft: 6, paddingRight: 6 }} onClick={handleShowBackups}>
-            📂 查看备份
-          </button>
           <label className="btn-outline btn-sm" style={{ cursor: 'pointer' }}>
             {importing ? '⏳ 导入中…' : '📤 导入备份'}
             <input
@@ -216,59 +190,13 @@ export default function Dashboard() {
           </label>
         </div>
         <p style={{ fontSize: '0.75rem', color: '#8ec8b8', marginTop: 8 }}>
-          每日自动备份，保留近 5 天 · 上次：
+          每日自动备份至 内部存储/Download/JewelryTracker/ · 上次：
           {localStorage.getItem('jewelry_last_backup_date') || '暂无'}
         </p>
         <p style={{ fontSize: '0.7rem', color: '#6e6250', marginTop: 4 }}>
           ver 7.30.6 · {import.meta.env.MODE}
         </p>
       </div>
-
-      {/* ── 备份管理弹窗 ──────────────────────────────────────────── */}
-      {showBackups && (
-        <div className="modal-overlay" onClick={() => setShowBackups(false)}>
-          <div className="modal" onClick={(e) => e.stopPropagation()} style={{ maxWidth: 440 }}>
-            <h4 style={{ fontSize: '0.85rem', color: '#8ec8b8', marginBottom: 8 }}>
-              自动备份 ({backupList.length})
-            </h4>
-
-            {backupList.length === 0 ? (
-              <p style={{ color: '#6e6250', fontSize: '0.85rem' }}>
-                暂无备份，明天打开 App 后自动创建
-              </p>
-            ) : (
-              <div style={{ maxHeight: 260, overflow: 'auto' }}>
-                {backupList.map((name) => {
-                  const dateStr = name.replace('jewelry-backup-', '').replace('.zip', '').replace('.db', '');
-                  return (
-                    <div
-                      key={name}
-                      style={{
-                        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                        padding: '8px 0', borderBottom: '1px solid #2e3048',
-                      }}
-                    >
-                      <span>📄 {dateStr}</span>
-                      <button
-                        className="btn-outline btn-sm"
-                        onClick={() => handleDownloadBackup(name)}
-                      >
-                        下载
-                      </button>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-
-            <div className="modal-actions" style={{ marginTop: 16 }}>
-              <button className="btn-outline btn-sm" onClick={() => setShowBackups(false)}>
-                关闭
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* ── 归一化确认弹窗 ────────────────────────────────────────── */}
       <ConfirmDialog

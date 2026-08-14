@@ -67,29 +67,41 @@ interface FileEntry {
   offset: number; // 相对于 zip 文件起始的偏移
 }
 
+// ── zip 写入目标抽象 ────────────────────────────────────────────────
+
+/**
+ * 底层写入目标：写入字节 / 收尾 / 出错清理。
+ * OPFS 文件流与原生直写桥各自实现此接口。
+ */
+export interface ZipSink {
+  write(bytes: Uint8Array): Promise<void>;
+  close(): Promise<void>;
+  abort(): Promise<void>;
+}
+
 // ── 流式 ZIP 写入器 ─────────────────────────────────────────────────
 
 export class ZipStreamWriter {
-  private writable: FileSystemWritableFileStream | null = null;
+  private sink: ZipSink | null = null;
   private entries: FileEntry[] = [];
   private currentOffset = 0;
   private dosTime: number;
 
-  constructor(private handle: FileSystemFileHandle) {
+  constructor(private openSink: () => Promise<ZipSink>) {
     this.dosTime = dosDateTime(new Date());
   }
 
-  /** 打开 OPFS 文件准备写入 */
+  /** 打开写入目标 */
   async open(): Promise<void> {
-    this.writable = await this.handle.createWritable();
+    this.sink = await this.openSink();
   }
 
   /**
    * 追加一个文件到 zip 归档（store 模式，无压缩）。
-   * 数据立即写入 OPFS，不在内存中缓存。
+   * 数据立即写入目标，不在内存中缓存。
    */
   async addFile(name: string, data: Uint8Array): Promise<void> {
-    if (!this.writable) throw new Error('ZipStreamWriter 未打开');
+    if (!this.sink) throw new Error('ZipStreamWriter 未打开');
 
     const nameBytes = encodeStr(name);
     const checksum = crc32(data);
@@ -117,17 +129,17 @@ export class ZipStreamWriter {
     });
 
     // 写入 header + data
-    await this.writable.write(header);
-    await this.writable.write(data);
+    await this.sink.write(header);
+    await this.sink.write(data);
     this.currentOffset += header.length + data.length;
   }
 
   /**
-   * 写入中央目录 + EOCD，关闭文件流。
+   * 写入中央目录 + EOCD，关闭写入目标。
    * 调用后不可再 addFile。
    */
   async finalize(): Promise<void> {
-    if (!this.writable) throw new Error('ZipStreamWriter 未打开');
+    if (!this.sink) throw new Error('ZipStreamWriter 未打开');
 
     const cdStart = this.currentOffset;
     let cdSize = 0;
@@ -154,7 +166,7 @@ export class ZipStreamWriter {
       putU32(buf, pos, entry.offset); pos += 4; // relative offset of local header
       buf.set(entry.nameBytes, pos);
 
-      await this.writable.write(buf);
+      await this.sink.write(buf);
       cdSize += buf.length;
     }
 
@@ -169,16 +181,16 @@ export class ZipStreamWriter {
     putU32(eocd, pos, cdStart); pos += 4;        // CD offset
     putU16(eocd, pos, 0);                        // comment length
 
-    await this.writable.write(eocd);
-    await this.writable.close();
-    this.writable = null;
+    await this.sink.write(eocd);
+    await this.sink.close();
+    this.sink = null;
   }
 
   /** 出错时清理 */
   async abort(): Promise<void> {
-    if (this.writable) {
-      try { await this.writable.close(); } catch { /* ignore */ }
-      this.writable = null;
+    if (this.sink) {
+      try { await this.sink.abort(); } catch { /* ignore */ }
+      this.sink = null;
     }
   }
 }
@@ -186,10 +198,11 @@ export class ZipStreamWriter {
 // ── 便捷函数 ────────────────────────────────────────────────────────
 
 /**
- * 在 OPFS /temp/ 下创建流式 ZIP 文件。
+ * 在指定目录下创建流式 ZIP 文件。
  * 调用方通过 writer.addFile() 逐个写入文件，最后调用 writer.finalize()。
  *
  * @param zipFilename 输出文件名（如 `jewelry-fullbackup-2026-08-05.zip`）
+ * @param parentDir 目录名（默认 temp）
  * @returns ZipStreamWriter 实例
  */
 export async function createZipWriter(
@@ -197,14 +210,22 @@ export async function createZipWriter(
   parentDir: string = 'temp',
 ): Promise<ZipStreamWriter> {
   const root = await navigator.storage.getDirectory();
-  let dir: FileSystemDirectoryHandle;
-  try {
-    dir = await root.getDirectoryHandle(parentDir, { create: true });
-  } catch {
-    dir = await root.getDirectoryHandle(parentDir, { create: true });
-  }
+  const dir = await root.getDirectoryHandle(parentDir, { create: true });
   const handle = await dir.getFileHandle(zipFilename, { create: true });
-  const writer = new ZipStreamWriter(handle);
+  const writer = new ZipStreamWriter(async () => {
+    const writable = await handle.createWritable();
+    return {
+      async write(bytes: Uint8Array) {
+        await writable.write(bytes);
+      },
+      async close() {
+        await writable.close();
+      },
+      async abort() {
+        await writable.close();
+      },
+    };
+  });
   await writer.open();
   return writer;
 }

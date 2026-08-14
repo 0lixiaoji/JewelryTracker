@@ -11,8 +11,9 @@ import initSqlJs, { type Database, type SqlJsStatic } from 'sql.js';
 import { INIT_SQL, MIGRATIONS } from './migration';
 import { nativeSaveAndShare } from '../capacitor/index';
 import { initImageStore, forEachImage, countImages, listImageNames, getImageBlobUrl } from './services/imageStore';
-import { createZipWriter, getTempZipFile, removeTempZip } from './services/zipStream';
+import { createZipWriter, getTempZipFile, removeTempZip, type ZipStreamWriter } from './services/zipStream';
 import { chunkedNativeShare } from '../capacitor/chunkWriter';
+import { cleanupExternalBackups, createNativeZipWriter, isNativeBackupAvailable } from '../capacitor/nativeBackup';
 
 // ── OPFS 存储配置 ─────────────────────────────────────────────────
 
@@ -309,20 +310,17 @@ export async function exportDatabase(): Promise<string | null> {
 }
 
 /**
- * 导出数据库 + 全部图片为 zip 包（流式写入 OPFS，不爆内存）。
+ * 导出数据库 + 全部图片为 zip 包（流式，不爆内存）。
  *
- * 逐张读取图片 → 流式写入 OPFS /temp/ 中的 zip 文件，
- * 任何时候内存中只保留当前处理的一张图片。
- *
- * 打包完成后直接用 OPFS 文件引用调起系统分享（navigator.share），
- * 不将 zip 加载到 JS 内存，避免大文件 OOM。
+ * Android 原生：zip 直接写入 内部存储/Download/JewelryTracker/；
+ * 其余平台：打包到临时文件后调起系统分享 / Web 下载。
  *
  * @param onProgress 进度回调 (current, total)，用于 UI 展示进度
- * @returns 'shared' 表示已通过分享面板处理，'download' 表示 Web 下载已触发
+ * @returns 'saved' 已直写目标目录；'shared' 已通过分享面板处理；'download' Web 下载已触发
  */
 export async function exportDatabaseWithImages(
   onProgress?: (current: number, total: number) => void,
-): Promise<'shared' | 'download'> {
+): Promise<'saved' | 'shared' | 'download'> {
   const database = getDBSync();
   const dbData = database.export();
   const dbBytes = new Uint8Array(dbData);
@@ -333,24 +331,22 @@ export async function exportDatabaseWithImages(
   const imageCount = await countImages();
   const total = 1 + imageCount;
 
-  // 流式创建 zip
+  // Android 原生：zip 直接写入 内部存储/Download/JewelryTracker/
+  if (isNativeBackupAvailable()) {
+    const writer = await createNativeZipWriter(zipFilename);
+    try {
+      await writeFullBackupZip(writer, dbFilename, dbBytes, onProgress, total);
+    } catch (err) {
+      await writer.abort();
+      throw err;
+    }
+    return 'saved';
+  }
+
+  // 其余平台：流式写入临时 zip，再分享 / 下载
   const writer = await createZipWriter(zipFilename);
-
   try {
-    // 写入数据库文件
-    await writer.addFile(dbFilename, dbBytes);
-    onProgress?.(1, total);
-
-    // 逐张写入图片（每次只读一张，写入后释放）
-    let imgIndex = 1;
-    await forEachImage(async (name, data) => {
-      await writer.addFile('images/' + name, data);
-      imgIndex++;
-      onProgress?.(1 + imgIndex - 1, total);
-    });
-
-    // 写中央目录 + 关闭
-    await writer.finalize();
+    await writeFullBackupZip(writer, dbFilename, dbBytes, onProgress, total);
   } catch (err) {
     await writer.abort();
     await removeTempZip(zipFilename);
@@ -395,6 +391,30 @@ export async function exportDatabaseWithImages(
 
   await removeTempZip(zipFilename);
   return 'download';
+}
+
+/** 向 zip 写入器写入数据库 + 全部图片（手动导出打包复用） */
+async function writeFullBackupZip(
+  writer: ZipStreamWriter,
+  dbFilename: string,
+  dbBytes: Uint8Array,
+  onProgress?: (current: number, total: number) => void,
+  total = 1,
+): Promise<void> {
+  // 写入数据库文件
+  await writer.addFile(dbFilename, dbBytes);
+  onProgress?.(1, total);
+
+  // 逐张写入图片（每次只读一张，写入后释放）
+  let imgIndex = 1;
+  await forEachImage(async (name, data) => {
+    await writer.addFile('images/' + name, data);
+    imgIndex++;
+    onProgress?.(imgIndex, total);
+  });
+
+  // 写中央目录 + 关闭
+  await writer.finalize();
 }
 
 /** 导入数据库文件，替换当前数据库。支持 .db（SQLite）和 .zip（完整备份）。 */
@@ -591,7 +611,6 @@ export { getImageBlobUrl };
 // ── 自动备份 ──────────────────────────────────────────────────────
 
 const BACKUP_PREFIX = 'jewelry-backup-';
-const BACKUP_LIST_KEY = 'jewelry_backup_list';
 
 /** 获取本地时区日期字符串 YYYY-MM-DD（中国时间 UTC+8） */
 function getLocalDateString(date?: Date): string {
@@ -602,8 +621,14 @@ function getLocalDateString(date?: Date): string {
   return `${year}-${month}-${day}`;
 }
 
-/** 每天自动备份一次（完整 zip：数据库 + 图片），保留最近 5 天 */
+/**
+ * 每天自动备份一次（完整 zip：数据库 + 全部图片），
+ * Android 直写 内部存储/Download/JewelryTracker/，保留最近 5 天。
+ * Web / iOS / 旧系统（API<29）无原生桥，不做自动备份。
+ */
 export async function autoBackup(): Promise<void> {
+  if (!isNativeBackupAvailable()) return;
+
   const lastBackup = localStorage.getItem('jewelry_last_backup_date');
   const today = getLocalDateString();
 
@@ -611,13 +636,12 @@ export async function autoBackup(): Promise<void> {
 
   try {
     const database = getDBSync();
-    const dbData = database.export();
-    const dbBytes = new Uint8Array(dbData);
+    const dbBytes = new Uint8Array(database.export());
     const dbFilename = `${BACKUP_PREFIX}${today}.db`;
     const zipFilename = `${BACKUP_PREFIX}${today}.zip`;
 
-    // 流式写入 zip 到 backups 目录
-    const writer = await createZipWriter(zipFilename, 'backups');
+    // zip 直接分片写入 Download/JewelryTracker/
+    const writer = await createNativeZipWriter(zipFilename);
 
     try {
       await writer.addFile(dbFilename, dbBytes);
@@ -628,80 +652,17 @@ export async function autoBackup(): Promise<void> {
 
       await writer.finalize();
     } catch (err) {
-      await writer.abort();
-      // 清理失败的 zip 文件
-      try {
-        const root = await navigator.storage.getDirectory();
-        const backupsDir = await root.getDirectoryHandle('backups');
-        await backupsDir.removeEntry(zipFilename);
-      } catch { /* ignore */ }
+      await writer.abort(); // 清理半成品
       throw err;
     }
 
-    localStorage.setItem('jewelry_last_backup_date', today);
-
-    // 记录备份文件
-    const list = JSON.parse(localStorage.getItem(BACKUP_LIST_KEY) ?? '[]') as string[];
-    list.push(zipFilename);
-    localStorage.setItem(BACKUP_LIST_KEY, JSON.stringify(list));
-
-    // 清理 5 天前的旧备份（包括旧版 .db 和新版 .zip）
+    // 清理 5 天前的旧备份
     const cutoff = new Date();
     cutoff.setDate(cutoff.getDate() - 5);
-    const cutoffStr = getLocalDateString(cutoff);
+    cleanupExternalBackups(getLocalDateString(cutoff));
 
-    const root = await navigator.storage.getDirectory();
-    const backupsDir = await root.getDirectoryHandle('backups');
-    const remaining: string[] = [];
-
-    for (const name of list) {
-      // 从文件名中提取日期：jewelry-backup-YYYY-MM-DD.zip 或 .db
-      const dateStr = name
-        .replace(BACKUP_PREFIX, '')
-        .replace('.zip', '')
-        .replace('.db', '');
-      if (dateStr < cutoffStr) {
-        await backupsDir.removeEntry(name).catch(() => {});
-      } else {
-        remaining.push(name);
-      }
-    }
-    localStorage.setItem(BACKUP_LIST_KEY, JSON.stringify(remaining));
+    localStorage.setItem('jewelry_last_backup_date', today);
   } catch (err) {
     console.warn('自动备份失败:', err);
   }
-}
-
-/** 获取所有备份文件列表（按日期倒序） */
-export function listBackups(): string[] {
-  const list = JSON.parse(localStorage.getItem(BACKUP_LIST_KEY) ?? '[]') as string[];
-  return list
-    .filter((n) => n.startsWith(BACKUP_PREFIX) && (n.endsWith('.zip') || n.endsWith('.db')))
-    .sort()
-    .reverse();
-}
-
-/** 下载指定日期的备份文件
- * @returns 'shared' — 已打开系统分享面板；'download' — Web 下载已触发 */
-export async function downloadBackup(filename: string): Promise<'shared' | 'download'> {
-  const root = await navigator.storage.getDirectory();
-  const backupsDir = await root.getDirectoryHandle('backups');
-  const handle = await backupsDir.getFileHandle(filename);
-  const file = await handle.getFile();
-  const buffer = await file.arrayBuffer();
-  const bytes = new Uint8Array(buffer);
-
-  // 尝试原生分享
-  const handled = await nativeSaveAndShare(bytes, filename);
-  if (handled) return 'shared';
-
-  // Web 降级：转 base64 存 localStorage，供 export.html 下载
-  let binary = '';
-  for (let i = 0; i < bytes.length; i++) {
-    binary += String.fromCharCode(bytes[i]);
-  }
-  localStorage.setItem('jewelry_export_data', btoa(binary));
-  localStorage.setItem('jewelry_export_filename', filename);
-  window.open(new URL(import.meta.env.BASE_URL + 'export.html', window.location.href).href, '_blank');
-  return 'download';
 }
