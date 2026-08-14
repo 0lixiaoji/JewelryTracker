@@ -893,6 +893,21 @@ button:disabled { background: #2c2416; color: #e8dcc8; cursor: not-allowed; }
   background: rgba(255,255,255,.3);
 }
 
+.fullscreen-counter {
+  position: absolute;
+  top: 14px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 3001;
+  color: rgba(255,255,255,.85);
+  font-size: 0.9rem;
+  letter-spacing: 0.05em;
+  background: rgba(0,0,0,.4);
+  padding: 4px 12px;
+  border-radius: 999px;
+  pointer-events: none;
+}
+
 .fullscreen-image-area {
   width: 100%;
   height: 100%;

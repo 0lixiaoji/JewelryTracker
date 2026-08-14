@@ -33,7 +33,22 @@ export default function CategoryDetail() {
   const [loading, setLoading] = useState(true);
   const [normalizing, setNormalizing] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<Item | null>(null);
-  const { openImage, viewerEl } = useFullscreenImageViewer();
+  const { openGallery, viewerEl } = useFullscreenImageViewer();
+
+  // 可点击查看原图的图片路径列表（无图的首饰不参与，用于左右滑动切换）
+  const galleryPaths = useMemo(
+    () => items.filter((it) => it.image_path).map((it) => it.image_path as string),
+    [items],
+  );
+
+  // 点击图片 → 打开整个网格的可滑动原图浏览（从被点击的这张开始）
+  const handleOpenImage = useCallback(
+    (item: Item) => {
+      const idx = galleryPaths.indexOf(item.image_path as string);
+      openGallery(galleryPaths, idx >= 0 ? idx : 0);
+    },
+    [galleryPaths, openGallery],
+  );
 
   const category = categories.find((c) => c.id === categoryId);
 
@@ -234,7 +249,7 @@ export default function CategoryDetail() {
               {/* 图片 — 点击查看原图 */}
               {item.image_path ? (
                 <div
-                  onClick={() => openImage(item.image_path!)}
+                  onClick={() => handleOpenImage(item)}
                   style={{ cursor: 'zoom-in' }}
                 >
                   <ImageWithFallback src={item.image_path} alt="" />

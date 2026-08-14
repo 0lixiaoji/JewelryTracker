@@ -9,6 +9,12 @@ interface Props {
   imageHeight: number;
   open: boolean;
   onClose: () => void;
+  /** 可选：左右滑动切换上一张 / 下一张（仅在图片处于 fit 尺寸时触发） */
+  onSwipeLeft?: () => void;
+  onSwipeRight?: () => void;
+  /** 可选：位置指示（index 从 1 开始，total 为总张数；total ≤ 1 时隐藏） */
+  index?: number;
+  total?: number;
 }
 
 interface Transform {
@@ -24,6 +30,7 @@ interface Transform {
  * - 双指捏合缩放 (0.5x ~ 5x)
  * - 单指拖拽平移
  * - 双击切换 fit ↔ 2.5x
+ * - 传入 onSwipeLeft/onSwipeRight 时，图片处于 fit 尺寸下横向滑动可切换上一张/下一张
  * - 右上角关闭按钮 / 点击黑色背景关闭
  * - 使用 React Portal 渲染到 body
  */
@@ -34,24 +41,34 @@ export default function FullscreenViewer({
   imageHeight,
   open,
   onClose,
+  onSwipeLeft,
+  onSwipeRight,
+  index = 1,
+  total = 1,
 }: Props) {
   const [screenSize, setScreenSize] = useState({ w: 0, h: 0 });
   const [transform, setTransform] = useState<Transform>({ x: 0, y: 0, scale: 1 });
+  // 图片处于 fit 尺寸时的横向跟手位移（用于左右切换）
+  const [swipeOffset, setSwipeOffset] = useState(0);
 
   const gesture = useRef<{
     startTransform: Transform;
     startTouches: Array<{ x: number; y: number }>;
     pinchStartDist: number;
     mode: 'none' | 'pan' | 'pinch';
+    swipeOffset: number;
   }>({
     startTransform: { x: 0, y: 0, scale: 1 },
     startTouches: [],
     pinchStartDist: 0,
     mode: 'none',
+    swipeOffset: 0,
   });
 
   const lastTap = useRef(0);
   const DOUBLE_TAP_MS = 300;
+  // 滑动切换后抑制紧随其后的 click，避免误触发双击缩放
+  const suppressClickRef = useRef(false);
 
   // ── 屏幕尺寸 ──────────────────────────────────────────
 
@@ -101,13 +118,15 @@ export default function FullscreenViewer({
     [fitScale, screenSize, imageWidth, imageHeight],
   );
 
-  // ── 每次打开 / 屏幕变化时重置 ────────────────────────
+  // ── 每次打开 / 切换图片 / 屏幕变化时重置 ──────────────
 
   useEffect(() => {
     if (open && fitScale > 0) {
       setTransform({ x: 0, y: 0, scale: fitScale });
+      setSwipeOffset(0);
+      gesture.current.swipeOffset = 0;
     }
-  }, [open, fitScale]);
+  }, [open, fitScale, src]);
 
   // ── 手势 ──────────────────────────────────────────────
 
@@ -120,6 +139,7 @@ export default function FullscreenViewer({
   });
 
   const onTouchStart = (e: React.TouchEvent) => {
+    suppressClickRef.current = false;
     const touches = Array.from(e.touches).map(getPos);
     const g = gesture.current;
     g.startTransform = transform;
@@ -131,6 +151,8 @@ export default function FullscreenViewer({
     } else {
       g.mode = 'pan';
     }
+    g.swipeOffset = 0;
+    setSwipeOffset(0);
   };
 
   const onTouchMove = (e: React.TouchEvent) => {
@@ -150,24 +172,59 @@ export default function FullscreenViewer({
         }),
       );
     } else if (g.mode === 'pan' && touches.length === 1) {
-      setTransform(
-        clamp({
-          x: g.startTransform.x + (touches[0].x - g.startTouches[0].x),
-          y: g.startTransform.y + (touches[0].y - g.startTouches[0].y),
-          scale: g.startTransform.scale,
-        }),
-      );
+      const start = g.startTouches[0];
+      const cur = touches[0];
+      const dx = cur.x - start.x;
+      const dy = cur.y - start.y;
+      // 图片处于 fit（未放大）且支持左右切换时，横向滑动→跟手位移，
+      // 松手时根据位移量决定切换；放大状态下仍按原逻辑平移。
+      const atFit = g.startTransform.scale <= fitScale + 0.005;
+      if (atFit && (onSwipeLeft || onSwipeRight)) {
+        g.swipeOffset = dx;
+        setSwipeOffset(dx);
+      } else {
+        setTransform(
+          clamp({
+            x: start.x + dx,
+            y: start.y + dy,
+            scale: g.startTransform.scale,
+          }),
+        );
+      }
     }
   };
 
   const onTouchEnd = () => {
-    gesture.current.mode = 'none';
+    const g = gesture.current;
+    const wasPan = g.mode === 'pan';
+    g.mode = 'none';
+
+    // fit 尺寸下横向滑动结束 → 判断是否切换上一张/下一张
+    if (wasPan && g.swipeOffset !== 0) {
+      const threshold = Math.max(48, screenSize.w * 0.2);
+      const off = g.swipeOffset;
+      g.swipeOffset = 0;
+      suppressClickRef.current = true; // 抑制滑动后误触发的 click（避免双击缩放）
+      if (off < -threshold && onSwipeLeft) {
+        setSwipeOffset(0);
+        onSwipeLeft(); // 左滑 → 下一张
+      } else if (off > threshold && onSwipeRight) {
+        setSwipeOffset(0);
+        onSwipeRight(); // 右滑 → 上一张
+      } else {
+        setSwipeOffset(0); // 不足阈值，回弹
+      }
+    }
   };
 
   // ── 双击 ──────────────────────────────────────────────
 
   const handleClick = (e: React.MouseEvent) => {
     e.stopPropagation();
+    if (suppressClickRef.current) {
+      suppressClickRef.current = false;
+      return;
+    }
     const now = Date.now();
     if (now - lastTap.current < DOUBLE_TAP_MS) {
       lastTap.current = 0;
@@ -186,15 +243,17 @@ export default function FullscreenViewer({
 
   const handleBackdropClick = () => onClose();
 
-  // ESC 键关闭
+  // ESC 关闭 / 左右方向键切换
   useEffect(() => {
     if (!open) return;
     const onKey = (e: KeyboardEvent) => {
       if (e.key === 'Escape') onClose();
+      else if (e.key === 'ArrowLeft') onSwipeRight?.();
+      else if (e.key === 'ArrowRight') onSwipeLeft?.();
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [open, onClose]);
+  }, [open, onClose, onSwipeLeft, onSwipeRight]);
 
   // 拦截系统返回手势 / 按键 → 关闭查看器而非回退路由
   useEffect(() => {
@@ -227,6 +286,13 @@ export default function FullscreenViewer({
         ✕
       </button>
 
+      {/* 位置指示 */}
+      {total > 1 && (
+        <div className="fullscreen-counter">
+          {index} / {total}
+        </div>
+      )}
+
       {/* 图片 */}
       <div
         className="fullscreen-image-area"
@@ -241,7 +307,7 @@ export default function FullscreenViewer({
           className="fullscreen-image"
           draggable={false}
           style={{
-            transform: `translate(${transform.x}px, ${transform.y}px) scale(${transform.scale})`,
+            transform: `translate(${transform.x + swipeOffset}px, ${transform.y}px) scale(${transform.scale})`,
             transformOrigin: 'center center',
           }}
         />
