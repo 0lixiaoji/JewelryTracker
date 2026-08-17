@@ -325,7 +325,7 @@ export async function exportDatabaseWithImages(
   const dbData = database.export();
   const dbBytes = new Uint8Array(dbData);
   const dbFilename = `jewelry-backup-${getLocalDateString()}.db`;
-  const zipFilename = `jewelry-fullbackup-${getLocalDateString()}.zip`;
+  const zipFilename = `jewelry-backup-${getLocalDateString()}.zip`;
 
   // 统计总数（DB 1 个 + 图片 N 张）
   const imageCount = await countImages();

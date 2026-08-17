@@ -201,7 +201,7 @@ export class ZipStreamWriter {
  * 在指定目录下创建流式 ZIP 文件。
  * 调用方通过 writer.addFile() 逐个写入文件，最后调用 writer.finalize()。
  *
- * @param zipFilename 输出文件名（如 `jewelry-fullbackup-2026-08-05.zip`）
+ * @param zipFilename 输出文件名（如 `jewelry-backup-2026-08-05.zip`）
  * @param parentDir 目录名（默认 temp）
  * @returns ZipStreamWriter 实例
  */

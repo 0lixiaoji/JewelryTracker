@@ -59,7 +59,7 @@ function nativeFinishAndShare(filename: string, mimeType: string, title: string)
  * 3. nativeFinishAndShare() 关闭文件并弹出分享面板
  *
  * @param opfsFile  OPFS 中的 File 对象（引用，不消耗内存）
- * @param filename  输出文件名（如 jewelry-fullbackup-2026-08-05.zip）
+ * @param filename  输出文件名（如 jewelry-backup-2026-08-05.zip）
  * @param mimeType  MIME 类型（如 application/zip）
  * @param title     分享对话框标题
  * @returns true 表示已通过原生分享处理
