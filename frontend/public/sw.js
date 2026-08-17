@@ -1,4 +1,4 @@
-var CACHE_NAME = 'jewelry-v21';
+var CACHE_NAME = 'jewelry-v23';
 
 // 安装：立即接管
 self.addEventListener('install', function () {

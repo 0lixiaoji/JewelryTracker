@@ -20,12 +20,20 @@ const TABLE_ICONS: Record<string, string> = {
   normalizations: '🔄',
 };
 
+/** 截掉日期时间字符串的毫秒部分（2026-08-17 10:23:45.123 或 .000 → 2026-08-17 10:23:45；ISO 同理） */
+function stripMilliseconds(value: string): string {
+  return value.replace(
+    /(\d{4}-\d{2}-\d{2}[ T]\d{2}:\d{2}:\d{2})\.\d{1,6}(Z|[+-]\d{2}:\d{2}|$)/,
+    '$1$2',
+  );
+}
+
 /** 将值格式化为可显示的字符串 */
 function formatCell(value: unknown): string {
   if (value === null) return '(null)';
   if (value === undefined) return '';
   if (value instanceof Uint8Array) return `[BLOB ${value.length} bytes]`;
-  return String(value);
+  return stripMilliseconds(String(value));
 }
 
 /** image_path 列的缩略图单元格 — 异步从 OPFS 加载图片显示，点击交由父级打开可滑动浏览的原图 */
