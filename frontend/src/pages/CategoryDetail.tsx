@@ -41,15 +41,6 @@ export default function CategoryDetail() {
     [items],
   );
 
-  // 点击图片 → 打开整个网格的可滑动原图浏览（从被点击的这张开始）
-  const handleOpenImage = useCallback(
-    (item: Item) => {
-      const idx = galleryPaths.indexOf(item.image_path as string);
-      openGallery(galleryPaths, idx >= 0 ? idx : 0);
-    },
-    [galleryPaths, openGallery],
-  );
-
   const category = categories.find((c) => c.id === categoryId);
 
   // 双类型分类（手链/耳环）的取色与列位：
@@ -98,6 +89,37 @@ export default function CategoryDetail() {
     }
     return { accents, columns, isDual };
   }, [items]);
+
+  // 按类型分组的有图路径（键为文件名前缀，同 dualTypeLayout 的 itemPrefix 分组）。
+  // 双类型分类下，左右滑动只在同类型内切换，避免两组混着滑。
+  const galleryByType = useMemo(() => {
+    const groups = new Map<string, string[]>();
+    for (const it of items) {
+      if (!it.image_path) continue;
+      const p = itemPrefix(it.image_path);
+      const arr = groups.get(p) ?? [];
+      arr.push(it.image_path as string);
+      groups.set(p, arr);
+    }
+    return groups;
+  }, [items]);
+
+  // 点击图片 → 打开可滑动原图浏览（从被点击的这张开始）。
+  // 双类型分类：滑动序列限定为被点击首饰所属类型的图片；单类型保持原有全网格滑动。
+  const handleOpenImage = useCallback(
+    (item: Item) => {
+      if (!item.image_path) return;
+      if (dualTypeLayout.isDual) {
+        const paths = galleryByType.get(itemPrefix(item.image_path)) ?? [];
+        const idx = paths.indexOf(item.image_path);
+        openGallery(paths, idx >= 0 ? idx : 0);
+      } else {
+        const idx = galleryPaths.indexOf(item.image_path);
+        openGallery(galleryPaths, idx >= 0 ? idx : 0);
+      }
+    },
+    [galleryPaths, galleryByType, dualTypeLayout.isDual, openGallery],
+  );
 
   const load = useCallback(async () => {
     setLoading(true);
